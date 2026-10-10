@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v4.0</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v4.1</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -803,6 +803,10 @@ function renderInspectCard(){
       <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-2);margin-top:8px;cursor:pointer">
         <input type="checkbox" onchange="AI_CFG.autoAnalyze=this.checked;saveAICfg();render()" ${AI_CFG.autoAnalyze!==false?'checked':''}> 上传照片后自动用 AI 分析
       </label>
+      <div style="margin-top:8px">
+        <input id="ai_focus" placeholder="🎯 分析重点（选填），如：检查砖缝对齐/高低差" value="${esc(AI_CFG.focus||'')}" oninput="AI_CFG.focus=this.value;saveAICfg()" style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px">
+        <div style="font-size:10px;color:var(--ink-2);margin-top:3px">填了之后 AI 会优先按你说的方向查，识别明显更准</div>
+      </div>
       ${aiOn&&ins.photos.some(p=>p.img)?`<button class="btn" style="width:100%;margin-top:8px;padding:7px 0;font-size:13px" onclick="analyzeAllInspect()">🤖 一键分析全部照片（${ins.photos.filter(p=>p.img).length} 张）</button>`:''}
       <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；智谱 glm-4v-flash / Gemini 免费额度均不收费。隐蔽工程以人工/监理为准。</div>
     </div>`;
@@ -1001,10 +1005,10 @@ function aiErrHint(status){
 async function callVision(dataUrl){
   if(AI_CFG.provider==='gemini') return callVisionGemini(dataUrl);
   const cfg=AI_CFG;
-  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律（必须遵守）：①宁缺毋滥：只报你有把握、照片中确实可见的问题，没把握宁可不报，发现几处报几处，可以是1处甚至0处，严禁为凑数而报；②未完工/尚未施工不算缺陷；③瓷砖砖缝（均匀深色勾缝线）不是裂缝；④分清墙面与地面，严禁搞错；⑤轻微浮尘、正常施工痕迹不算缺陷。重点检查：瓷砖缝里是否嵌着未取出的塑料十字卡/找平器楔子（美缝前必须取出，否则美缝剂粘不牢）、美缝是否饱满有无针眼凹陷、排水管管口是否敞开未封堵、出水口是否加堵头、线盒线头是否裸露乱放、瓷砖切割口是否粗糙未收口、砖面是否有明显水泥浆结块（轻微浮尘不算）、空鼓破损、成品被压划伤。每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。只有确实看不出问题时才返回 {"issues":[]}，严禁编造。';
+  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律（必须遵守）：①宁缺毋滥：只报有把握、确实可见的问题，发现几处报几处，可以是1处甚至0处，严禁凑数；②未完工不算缺陷；③砖缝不是裂缝；④分清墙面与地面；⑤轻微浮尘不算缺陷。重点检查（按优先级）：一、对齐与平整：横缝竖缝是否贯通在一条直线上、十字缝上下左右是否对齐、相邻瓷砖有无高低差错台（可从缝两侧反光是否错位判断）、找平器楔子/十字卡是否凸出未拆除、砖角有无崩瓷缺口；二、缝隙工艺：美缝是否饱满有无针眼凹陷；三、隐患：管口是否未封堵、出水口未加堵头、线盒线头裸露；四、其他：明显水泥浆结块、空鼓破损、成品划伤。注意：照片可能由上下两幅拼成（上半=现场问题、下半=正确做法对比），若如此请对比差异并只报现场画面的缺陷。每条写清具体位置和现象，改法小白能照做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。确实看不出问题才返回 {"issues":[]}，严禁编造。';
   const body={ model:cfg.model, temperature:0.3, messages:[
     {role:'system',content:sys},
-    {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'}, {type:'image_url',image_url:{url:dataUrl}} ]}
+    {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'+(cfg.focus?'\n用户特别提醒，优先关注：'+cfg.focus:'')}, {type:'image_url',image_url:{url:dataUrl}} ]}
   ]};
   if(cfg.json!==false) body.response_format={type:'json_object'};
   const resp=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
@@ -1017,11 +1021,11 @@ async function callVision(dataUrl){
 async function callVisionGemini(dataUrl){
   const cfg=AI_CFG;
   const model=cfg.model||'gemini-2.0-flash';
-  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律（必须遵守）：①宁缺毋滥：只报有把握、确实可见的问题，发现几处报几处，可以是1处甚至0处，严禁凑数；②未完工不算缺陷；③砖缝不是裂缝；④分清墙面与地面；⑤轻微浮尘不算缺陷。重点检查：瓷砖缝里未取出的塑料十字卡/找平器楔子、美缝是否饱满、管口是否未封堵、出水口是否未加堵头、线盒线头裸露、切割口粗糙、明显水泥浆结块、空鼓破损、成品划伤。每条写清具体位置和现象，改法小白能照做。输出 JSON：{"issues":[{"cat":"部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。确实看不出问题才返回 {"issues":[]}，严禁编造。';
+  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律：①宁缺毋滥，只报有把握的问题，可以是0处，严禁凑数；②未完工不算缺陷；③砖缝不是裂缝；④分清墙面与地面；⑤轻微浮尘不算缺陷。重点检查：横缝竖缝是否贯通对齐、十字缝是否对齐、相邻砖有无高低差错台（看缝两侧反光是否错位）、找平器楔子/十字卡是否凸出未拆、砖角崩瓷、美缝针眼、管口未封堵、线盒线头裸露、明显水泥浆结块、成品划伤。照片可能由上下两幅拼成（上半=现场、下半=正确对比），若如此对比差异只报上半的缺陷。输出 JSON：{"issues":[{"cat":"部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。确实看不出问题才返回 {"issues":[]}，严禁编造。';
   const b64=(dataUrl.split(',')[1]||dataUrl);
   const body={
     contents:[{parts:[
-      {text: sys+' 请分析这张装修现场照片，列出没做好的地方及改正方法。'},
+      {text: sys+' 请分析这张装修现场照片，列出没做好的地方及改正方法。'+(cfg.focus?'\n用户特别提醒，优先关注：'+cfg.focus:'')},
       {inlineData:{mimeType:'image/jpeg', data:b64}}
     ]}],
     generationConfig:{temperature:0.3, responseMimeType:'application/json'}
