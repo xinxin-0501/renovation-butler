@@ -110,6 +110,19 @@
   .task.done .box svg{display:block;}
   .task.done .txt{color:var(--ink-2);text-decoration:line-through;}
   .task .txt{line-height:1.5;flex:1;min-width:0;}
+  /* 案例参考 v2.5 */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:13px;color:var(--ink);cursor:pointer;user-select:none}
+  .chip.on{background:var(--orange,#FF7A45);border-color:var(--orange,#FF7A45);color:#fff}
+  .chip i{font-style:normal;opacity:.55;font-size:11px;padding-left:2px}
+  .chip.add{border-style:dashed;color:var(--ink-2)}
+  .case-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ph{position:relative;border-radius:12px;overflow:hidden;background:#f6f1e7;aspect-ratio:4/5}
+  .ph img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
+  .ph-tag{position:absolute;left:0;right:0;bottom:0;padding:16px 8px 6px;background:linear-gradient(transparent,rgba(0,0,0,.55));color:#fff;font-size:11px;pointer-events:none}
+  .ph-ops{position:absolute;top:6px;right:6px;display:flex;gap:5px}
+  .ph-ops button{width:27px;height:27px;border:none;border-radius:50%;background:rgba(255,255,255,.92);font-size:13px;cursor:pointer;line-height:1}
+  .case-empty{border:2px dashed var(--line);border-radius:14px;padding:28px 12px;text-align:center;color:var(--ink-2);cursor:pointer}
   .task .edit{margin-left:10px;flex:0 0 auto;color:var(--ink-2);font-size:16px;cursor:pointer;padding:2px 4px;border-radius:8px;}
   .task .edit:active{background:#F0F2F5;}
   .prep-note{font-size:12px;color:var(--ink-2);margin-top:5px;background:#F7F8FA;padding:6px 9px;border-radius:8px;line-height:1.5;}
@@ -206,7 +219,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.4</b>（含前期准备 + 合同范本 + 采购比价）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.5</b>（前期准备 + 合同范本 + 采购比价 + 案例参考）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -236,6 +249,10 @@
     <div class="tab" data-t="price" onclick="switchTab('price')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><circle cx="7" cy="7" r="1.5"/></svg>
       比价
+    </div>
+    <div class="tab" data-t="cases" onclick="switchTab('cases')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-4.5-4.5L7 20"/></svg>
+      案例
     </div>
   </nav>
 </div>
@@ -393,6 +410,11 @@ function seed(){
       ],
     },
     purchases:[],
+    cases:{ selSpace:'', selSub:'',
+      spaces:['客厅','厨房','卧室','阳台','卫生间','书房'],
+      subs:['电视墙','沙发','吊顶','灯光','收纳','瓷砖'],
+      photos:[],   // {id,img,space,sub,note,date} 全部为用户自己上传的真实图片
+    },
   };
 }
 
@@ -407,6 +429,7 @@ function load(){
       s.todos  = d.todos;
       if(d.prep) s.prep = d.prep;   // 兼容旧数据，不覆盖用户已有内容
       if(d.purchases) s.purchases = d.purchases;  // 比价数据兼容（v2.3）
+      if(d.cases) s.cases = d.cases;              // 案例参考兼容（v2.5）
       return s;
     }
   }catch(e){}
@@ -445,6 +468,7 @@ function render(){
   else if(curTab==='budget') v.innerHTML=renderBudget();
   else if(curTab==='todo') v.innerHTML=renderTodo();
   else if(curTab==='prep') v.innerHTML=renderPrep();
+  else if(curTab==='cases') v.innerHTML=renderCases();
   else if(curTab==='price') v.innerHTML=renderPrice();
 }
 
@@ -1019,6 +1043,109 @@ function zoomPhoto(src){
   m.onclick=()=>m.remove();
   const im=document.createElement('img'); im.src=url; im.style.cssText='max-width:100%;max-height:100%;border-radius:10px';
   m.appendChild(im); document.body.appendChild(m);
+}
+
+/* ============ 案例参考（v2.5） ============ */
+function renderCases(){
+  const c=S.cases;
+  const chip=(name,on,type,del)=>`<span class="chip ${on?'on':''}" onclick="caseToggle('${type}','${esc(name)}')">${esc(name)}${del?`<i onclick="event.stopPropagation();caseDel('${type}','${esc(name)}')">✕</i>`:''}</span>`;
+  const spaces=c.spaces.map(s=>chip(s,c.selSpace===s,'space',true)).join('')
+    + `<span class="chip add" onclick="caseAdd('space')">＋ 新增</span>`;
+  const subs=c.subs.map(s=>chip(s,c.selSub===s,'sub',true)).join('')
+    + `<span class="chip add" onclick="caseAdd('sub')">＋ 新增</span>`;
+  const list=c.photos.filter(p=>(!c.selSpace||p.space===c.selSpace)&&(!c.selSub||p.sub===c.selSub));
+  const grid=list.length?`<div class="case-grid">${list.map(p=>`
+    <div class="ph">
+      <img src="${p.img}" alt="" onclick="zoomCase('${p.id}')">
+      <div class="ph-tag">${esc([p.space,p.sub].filter(Boolean).join(' · ')||'未分类')}${p.note?`<span style="display:block;opacity:.85;margin-top:1px">${esc(p.note)}</span>`:''}</div>
+      <div class="ph-ops">
+        <button title="编辑" onclick="editCase('${p.id}')">✎</button>
+        <button title="删除" onclick="delCase('${p.id}')">🗑</button>
+      </div>
+    </div>`).join('')}</div>`
+    :`<div class="case-empty" onclick="pickCaseFiles(false)">
+        <div style="font-size:30px">🖼️</div>
+        <div style="font-weight:600;margin-top:6px">点击上传装修参考图片</div>
+        <div style="font-size:12px;color:var(--ink-2);margin-top:3px">支持相册选择或拍照${(c.selSpace||c.selSub)?`，将自动归入「${esc([c.selSpace,c.selSub].filter(Boolean).join('·'))}」`:''}</div>
+      </div>`;
+  return `
+  <div class="card">
+    <h3><span class="dot"></span>空间分类</h3>
+    <div class="chips">${spaces}</div>
+  </div>
+  <div class="card">
+    <h3><span class="dot"></span>细分分类</h3>
+    <div class="chips">${subs}</div>
+  </div>
+  <div class="card">
+    <h3><span class="dot"></span>灵感图库 <span style="font-size:12px;color:var(--ink-2);font-weight:400">共 ${c.photos.length} 张${(c.selSpace||c.selSub)?` · 筛选后 ${list.length} 张`:''}</span></h3>
+    ${grid}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" style="flex:1" onclick="pickCaseFiles(false)">📂 从相册选</button>
+      <button class="btn ghost" style="flex:1" onclick="pickCaseFiles(true)">📷 拍照</button>
+    </div>
+    <input type="file" id="caseFile" accept="image/*" multiple style="display:none" onchange="caseFiles(this)">
+    <input type="file" id="caseCam" accept="image/*" capture="environment" style="display:none" onchange="caseFiles(this)">
+  </div>
+  <p style="font-size:12px;color:var(--ink-2);text-align:center;margin:4px 0 8px">图片压缩后存本机浏览器，不上传网络；换设备/清缓存会丢失，重要图请另存。</p>`;
+}
+function caseToggle(type,name){
+  const c=S.cases, k=type==='space'?'selSpace':'selSub';
+  c[k] = c[k]===name ? '' : name; save(); render();
+}
+function caseAdd(type){
+  const c=S.cases, arr=type==='space'?c.spaces:c.subs;
+  const v=prompt('输入新的'+(type==='space'?'空间':'细分')+'分类名（如：玄关 / 瓷砖）：');
+  if(!v||!v.trim()) return; const name=v.trim();
+  if(arr.includes(name)){ alert('该分类已存在'); return; }
+  arr.push(name); save(); render();
+}
+function caseDel(type,name){
+  const c=S.cases;
+  if(!confirm(`删除分类「${name}」？\n（已上传图片不会被删除，只是不再带此标签）`)) return;
+  if(type==='space'){ c.spaces=c.spaces.filter(x=>x!==name); if(c.selSpace===name)c.selSpace=''; c.photos.forEach(p=>{if(p.space===name)p.space='';}); }
+  else{ c.subs=c.subs.filter(x=>x!==name); if(c.selSub===name)c.selSub=''; c.photos.forEach(p=>{if(p.sub===name)p.sub='';}); }
+  save(); render();
+}
+function pickCaseFiles(cam){
+  const el=document.getElementById(cam?'caseCam':'caseFile');
+  if(el){ el.value=''; el.click(); }
+}
+function caseFiles(input){
+  const c=S.cases, fs=[...input.files]; if(!fs.length) return;
+  let done=0;
+  fs.forEach(f=>resizeImage(f,900,0.72,url=>{
+    c.photos.unshift({id:uid(),img:url,space:c.selSpace||'',sub:c.selSub||'',note:'',date:today()});
+    save(); render();
+    if(++done===fs.length) alert(done===1?'已添加 1 张图片':`已添加 ${done} 张图片`);
+  }));
+}
+function zoomCase(id){ const p=S.cases.photos.find(x=>x.id===id); if(p) zoomPhoto(encodeURIComponent(p.img)); }
+function delCase(id){
+  if(!confirm('删除这张图片？删除后不可恢复。')) return;
+  S.cases.photos=S.cases.photos.filter(x=>x.id!==id); save(); render();
+}
+function editCase(id){
+  const c=S.cases, p=c.photos.find(x=>x.id===id); if(!p) return;
+  const opts=(arr,cur)=>arr.map(s=>`<option ${s===cur?'selected':''}>${esc(s)}</option>`).join('');
+  openSheet(`
+    <h4>✎ 编辑图片信息</h4>
+    <img src="${p.img}" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin:8px 0">
+    <label style="font-size:13px;color:var(--ink-2)">空间分类</label>
+    <select id="ceSpace" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin:4px 0 10px;font-size:14px"><option value="">未分类</option>${opts(c.spaces,p.space)}</select>
+    <label style="font-size:13px;color:var(--ink-2)">细分分类</label>
+    <select id="ceSub" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin:4px 0 10px;font-size:14px"><option value="">未分类</option>${opts(c.subs,p.sub)}</select>
+    <label style="font-size:13px;color:var(--ink-2)">备注（如：喜欢这个电视墙材质）</label>
+    <textarea id="ceNote" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin:4px 0 12px;font-size:14px;resize:vertical">${esc(p.note)}</textarea>
+    <button class="btn" style="width:100%" onclick="saveCase('${p.id}')">保存</button>
+    <button class="btn cancel" style="width:100%;margin-top:8px" onclick="closeSheet()">取消</button>`);
+}
+function saveCase(id){
+  const p=S.cases.photos.find(x=>x.id===id); if(!p) return;
+  p.space=document.getElementById('ceSpace').value;
+  p.sub=document.getElementById('ceSub').value;
+  p.note=document.getElementById('ceNote').value.trim();
+  save(); closeSheet(); render();
 }
 
 /* ============ 交互 ============ */
