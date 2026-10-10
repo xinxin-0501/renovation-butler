@@ -793,6 +793,7 @@ function priceCard(p){
         <span style="font-size:11px;background:${bg};color:var(--ink-2);border-radius:6px;padding:2px 8px;margin-right:6px">${chip}</span>
         <span style="font-size:11px;color:var(--ink-2);background:var(--bg);border-radius:6px;padding:2px 8px">${esc(p.cat||'未分类')}</span>
         <div style="font-weight:700;font-size:15px;margin-top:6px">${esc(p.name)}</div>
+        <button class="btn ghost" style="margin-top:7px;padding:5px 10px;font-size:12px" onclick="openPriceCompare('${p.id}')">🔗 去京东/天猫/拼多多等比价</button>
         ${p.budget>0?`<div style="font-size:12px;color:var(--ink-2);margin-top:2px">预算 ${fmt(p.budget)}${min!=null?' · 最低 '+fmt(min):''}</div>`:(min!=null?`<div style="font-size:12px;color:var(--ink-2);margin-top:2px">最低 ${fmt(min)}</div>`:'')}
       </div>
       <div style="color:var(--ink-2);cursor:pointer;padding:2px 4px" onclick="delProduct('${p.id}')">🗑</div>
@@ -918,6 +919,35 @@ function cancelOrder(pid){
   const p=S.purchases.find(x=>x.id===pid);
   if(p.ordered&&p.ordered.rec&&!confirm('该笔已记入预算支出，取消下单不会自动删除预算里的那笔支出（可到「预算」页核对）。确定取消？')) return;
   p.ordered=null; save(); render();
+}
+function openPriceCompare(pid){
+  const p=S.purchases.find(x=>x.id===pid);
+  const q=encodeURIComponent(p.name);
+  const sites=[
+    ['京东',   'https://search.jd.com/Search?keyword='+q],
+    ['天猫',   'https://list.tmall.com/search_product.htm?q='+q],
+    ['淘宝',   'https://s.taobao.com/search?q='+q],
+    ['拼多多', 'https://mobile.yangkeduo.com/search_result.html?search_key='+q],
+    ['苏宁',   'https://search.suning.com/'+encodeURIComponent(p.name)+'/'],
+    ['什么值得买','https://search.smzdm.com/?c=home&s='+q],
+  ];
+  const links=sites.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener" style="display:block;padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;text-decoration:none;color:var(--ink);font-size:14px">🔗 ${n} · 搜索「${esc(p.name)}」</a>`).join('');
+  openSheet(`
+    <h4>🔗 去各平台比价 — ${esc(p.name)}</h4>
+    <p style="font-size:12px;color:var(--ink-2);margin:4px 0 12px">点任意平台在新窗口打开搜索结果，看准实时价后，回到本页点「＋ 报价」把真实价格填回即可。</p>
+    ${links}
+    <button class="btn" style="width:100%;margin-top:4px" onclick="openAllCompare('${pid}')">一次性打开全部平台</button>
+    <button class="btn cancel" style="width:100%;margin-top:8px" onclick="closeSheet()">关闭</button>`);
+}
+function openAllCompare(pid){
+  const p=S.purchases.find(x=>x.id===pid);
+  const q=encodeURIComponent(p.name);
+  ['https://search.jd.com/Search?keyword='+q,
+   'https://list.tmall.com/search_product.htm?q='+q,
+   'https://s.taobao.com/search?q='+q,
+   'https://mobile.yangkeduo.com/search_result.html?search_key='+q,
+   'https://search.smzdm.com/?c=home&s='+q].forEach(u=>window.open(u,'_blank'));
+  closeSheet();
 }
 function togglePrep(type,id){
   const x = S.prep[type].find(y=>y.id===id); x.done=!x.done; save(); render();
