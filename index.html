@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>装修管家工作台</title>
+<style>
+  :root{
+    --primary:#FF7A45;
+    --primary-soft:#FFF1EA;
+    --bg:#F4F5F7;
+    --card:#FFFFFF;
+    --ink:#2B2B2B;
+    --ink-2:#8A8F99;
+    --line:#EEF0F3;
+    --green:#34C759;
+    --green-soft:#E9F9EE;
+    --red:#FF3B30;
+    --red-soft:#FFECEB;
+    --blue:#2DA3F8;
+    --blue-soft:#E8F4FF;
+    --amber:#FF9F0A;
+    --radius:16px;
+    --shadow:0 6px 20px rgba(20,30,50,.06);
+    font-size:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);
+    display:flex;justify-content:center;
+  }
+  /* 手机外壳：桌面端居中显示，移动端铺满 */
+  .app{
+    width:100%;max-width:430px;min-height:100vh;
+    background:var(--bg);position:relative;
+    display:flex;flex-direction:column;
+    box-shadow:0 0 40px rgba(0,0,0,.05);
+  }
+  header{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(135deg,#FF8A5B,#FF6B3D);
+    color:#fff;padding:18px 18px 16px;
+    border-radius:0 0 22px 22px;
+  }
+  header .title{font-size:20px;font-weight:800;letter-spacing:1px;display:flex;align-items:center;gap:8px;}
+  header .sub{font-size:12px;opacity:.9;margin-top:4px;}
+  header .reset{
+    position:absolute;right:16px;top:18px;font-size:12px;
+    background:rgba(255,255,255,.22);color:#fff;border:none;
+    padding:6px 12px;border-radius:20px;cursor:pointer;
+  }
+  .scroll{flex:1;overflow-y:auto;padding:16px 14px 90px;-webkit-overflow-scrolling:touch;}
+
+  /* 通用卡片 */
+  .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+  .card h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:7px;}
+  .card h3 .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);}
+
+  /* 总览 hero */
+  .hero{
+    background:linear-gradient(135deg,#FFF6F1,#FFEFE8);
+    border:1px solid #FFE0D2;
+  }
+  .hero .stage-name{font-size:17px;font-weight:800;color:var(--primary);margin-top:2px;}
+  .ring-wrap{display:flex;align-items:center;gap:16px;}
+  .ring{position:relative;width:84px;height:84px;flex:0 0 auto;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:var(--primary);}
+  .hero .meta{font-size:13px;color:var(--ink-2);line-height:1.7;}
+  .hero .meta b{color:var(--ink);}
+
+  /* 统计格 */
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+  .stat{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:var(--shadow);}
+  .stat .num{font-size:20px;font-weight:800;}
+  .stat .lbl{font-size:11px;color:var(--ink-2);margin-top:3px;}
+  .stat.warn .num{color:var(--red);}
+  .stat.ok .num{color:var(--green);}
+
+  /* 下一步 */
+  .next-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px;}
+  .next-item:last-child{border-bottom:none;}
+  .next-item .box{width:18px;height:18px;border-radius:5px;border:2px solid #D7DBE0;flex:0 0 auto;margin-top:1px;}
+  .next-item.done .txt{color:var(--ink-2);text-decoration:line-through;}
+
+  /* 进度条 */
+  .bar{height:9px;background:#F0F2F5;border-radius:6px;overflow:hidden;}
+  .bar > i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#FF9A5B,#FF6B3D);}
+  .bar.over > i{background:linear-gradient(90deg,#FF6B6B,#FF3B30);}
+
+  /* 流程阶段 */
+  .stage-card .head{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .stage-card .idx{
+    width:30px;height:30px;border-radius:9px;flex:0 0 auto;
+    background:var(--primary-soft);color:var(--primary);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;
+  }
+  .stage-card.done .idx{background:var(--green);color:#fff;}
+  .stage-card .name{font-size:15px;font-weight:700;flex:1;}
+  .stage-card .prog{font-size:12px;color:var(--ink-2);}
+  .stage-card .chev{transition:transform .25s;color:var(--ink-2);}
+  .stage-card.open .chev{transform:rotate(180deg);}
+  .stage-body{display:none;margin-top:12px;}
+  .stage-card.open .stage-body{display:block;}
+  .task{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:14px;cursor:pointer;}
+  .task .box{width:19px;height:19px;border-radius:6px;border:2px solid #D7DBE0;flex:0 0 auto;margin-top:1px;display:flex;align-items:center;justify-content:center;}
+  .task.done .box{background:var(--green);border-color:var(--green);}
+  .task.done .box svg{display:block;}
+  .task.done .txt{color:var(--ink-2);text-decoration:line-through;}
+  .task .txt{line-height:1.5;flex:1;min-width:0;}
+  .task .edit{margin-left:10px;flex:0 0 auto;color:var(--ink-2);font-size:16px;cursor:pointer;padding:2px 4px;border-radius:8px;}
+  .task .edit:active{background:#F0F2F5;}
+  .prep-note{font-size:12px;color:var(--ink-2);margin-top:5px;background:#F7F8FA;padding:6px 9px;border-radius:8px;line-height:1.5;}
+  .prep-photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+  .prep-photos img{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer;}
+  .guide{margin-top:10px;background:var(--primary-soft);border-radius:12px;padding:12px;}
+  .guide .gt{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .guide li{font-size:13px;color:#6b6f76;line-height:1.6;margin-bottom:5px;}
+
+  /* 预算 */
+  .budget-total{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;}
+  .budget-total .big{font-size:24px;font-weight:800;}
+  .budget-total .big small{font-size:13px;color:var(--ink-2);font-weight:500;}
+  .budget-total .tag{font-size:12px;padding:4px 10px;border-radius:20px;font-weight:700;}
+  .tag.ok{background:var(--green-soft);color:var(--green);}
+  .tag.over{background:var(--red-soft);color:var(--red);}
+  .cat{margin-top:14px;}
+  .cat .top{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-bottom:6px;}
+  .cat .top .nm{font-weight:700;display:flex;align-items:center;gap:7px;}
+  .cat .top .amt{color:var(--ink-2);font-size:13px;}
+  .cat .top .amt b{color:var(--ink);font-weight:700;}
+  .cat .edit-budget{font-size:12px;color:var(--blue);cursor:pointer;margin-left:6px;}
+  .cat .alert{font-size:12px;color:var(--red);margin-top:6px;display:none;}
+  .cat.over .alert{display:block;}
+  .cat.over .bar > i{background:linear-gradient(90deg,#FF6B6B,#FF3B30);}
+  .swatch{width:10px;height:10px;border-radius:3px;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--primary);color:#fff;border:none;border-radius:12px;
+    padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer;width:100%;
+  }
+  .btn.ghost{background:var(--primary-soft);color:var(--primary);}
+
+  /* 待办 */
+  .todo{display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--bg);border-radius:12px;margin-bottom:10px;}
+  .todo .box{width:20px;height:20px;border-radius:6px;border:2px solid #D7DBE0;flex:0 0 auto;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .todo.done .box{background:var(--green);border-color:var(--green);}
+  .todo.done .tt{text-decoration:line-through;color:var(--ink-2);}
+  .todo .body{flex:1;min-width:0;}
+  .todo .tt{font-size:14px;font-weight:600;line-height:1.4;}
+  .todo .meta{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;}
+  .pill{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700;}
+  .pill.high{background:var(--red-soft);color:var(--red);}
+  .pill.mid{background:var(--amber);color:#fff;}
+  .pill.low{background:#EDEFF2;color:var(--ink-2);}
+  .pill.date{background:var(--blue-soft);color:var(--blue);}
+  .pill.date.over{background:var(--red-soft);color:var(--red);}
+  .todo .del{color:var(--ink-2);font-size:18px;cursor:pointer;padding:0 4px;flex:0 0 auto;}
+  .empty{text-align:center;color:var(--ink-2);font-size:13px;padding:26px 0;}
+
+  /* 底部导航 */
+  nav{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:430px;
+    background:#fff;border-top:1px solid var(--line);
+    display:flex;z-index:30;padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+  }
+  nav .tab{flex:1;text-align:center;font-size:11px;color:var(--ink-2);cursor:pointer;padding:4px 0;}
+  nav .tab svg{display:block;margin:0 auto 3px;}
+  nav .tab.active{color:var(--primary);font-weight:700;}
+  nav .tab .badge{position:relative;}
+  nav .tab .badge::after{
+    content:attr(data-b);position:absolute;top:-4px;right:calc(50% - 22px);
+    background:var(--red);color:#fff;font-size:9px;min-width:15px;height:15px;
+    border-radius:8px;padding:0 3px;display:flex;align-items:center;justify-content:center;font-weight:700;
+  }
+
+  /* 弹窗 */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;display:none;align-items:flex-end;justify-content:center;}
+  .mask.show{display:flex;}
+  .sheet{
+    background:#fff;width:100%;max-width:430px;border-radius:22px 22px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom));animation:up .25s ease;
+  }
+  @keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
+  .sheet h4{margin:0 0 16px;font-size:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:6px;}
+  .field input,.field select,.field textarea{
+    width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:14px;font-family:inherit;background:#FBFCFD;color:var(--ink);
+  }
+  .field textarea{resize:none;height:64px;}
+  .seg{display:flex;gap:8px;}
+  .seg button{flex:1;border:1px solid var(--line);background:#FBFCFD;border-radius:12px;padding:10px;font-size:14px;cursor:pointer;color:var(--ink-2);}
+  .seg button.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary);font-weight:700;}
+  .sheet .row{display:flex;gap:10px;margin-top:6px;}
+  .sheet .row .btn{flex:1;}
+  .sheet .row .btn.cancel{background:#F0F2F5;color:var(--ink-2);}
+  .center{text-align:center;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title">🏠 装修管家工作台</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.2</b>（含前期准备 + 合同范本）</div>
+    <button class="reset" onclick="resetAll()">重置</button>
+  </header>
+
+  <div class="scroll" id="view"></div>
+
+  <nav id="nav">
+    <div class="tab active" data-t="overview" onclick="switchTab('overview')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      总览
+    </div>
+    <div class="tab" data-t="process" onclick="switchTab('process')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.6"/><circle cx="3.5" cy="12" r="1.6"/><circle cx="3.5" cy="18" r="1.6"/></svg>
+      流程
+    </div>
+    <div class="tab" data-t="budget" onclick="switchTab('budget')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+      预算
+    </div>
+    <div class="tab" data-t="todo" onclick="switchTab('todo')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      待办
+    </div>
+    <div class="tab" data-t="prep" onclick="switchTab('prep')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6a1 1 0 0 1 1 1v2h2a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V3a1 1 0 0 1 1-1z"/><path d="M9 4h6v3H9z"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      前期
+    </div>
+  </nav>
+</div>
+
+<!-- 弹窗 -->
+<div class="mask" id="mask" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+/* ============ 初始数据 ============ */
+const STORAGE = 'renovation_butler_v1';
+
+function seed(){
+  return {
+    stages:[
+      {id:'s1',name:'验房',open:false,tasks:[
+        {id:'t1',text:'检查墙面、地面空鼓与裂缝',done:false},
+        {id:'t2',text:'门窗密封与开合测试',done:false},
+        {id:'t3',text:'卫生间闭水试验（24-48小时）',done:false},
+        {id:'t4',text:'下水管道通畅性测试',done:false},
+        {id:'t5',text:'实测套内面积，核对合同',done:false},
+      ],guide:[
+        '先验后收，发现问题当场在验房单上记录并拍照留证。',
+        '空鼓用空鼓锤轻敲，单面墙空鼓面积超过 5% 应要求整改。',
+        '闭水试验水位不低于 2cm，楼下顶面无渗漏才算合格。',
+        '带卷尺、验电笔、水桶、手机支架，按清单逐项核验。',
+      ]},
+      {id:'s2',name:'拆改',open:false,tasks:[
+        {id:'t1',text:'确认承重墙 / 剪力墙 / 配重墙不可拆',done:false},
+        {id:'t2',text:'标记原有水电管线走向',done:false},
+        {id:'t3',text:'确认拆改范围与报价明细',done:false},
+        {id:'t4',text:'谈定垃圾清运费用',done:false},
+        {id:'t5',text:'评估厨卫原防水层是否需重做',done:false},
+      ],guide:[
+        '户型图上黑色实心墙体多为承重墙，严禁拆除或开大洞。',
+        '拆改前让水电工标注管线，避免打断后 costly 返工。',
+        '拆改、清运、复原（如门洞修复）要写进合同，防止后期加价。',
+        '阳台配重墙（压阳台的矮墙）拆除会破坏结构，绝对不能动。',
+      ]},
+      {id:'s3',name:'水电',open:false,tasks:[
+        {id:'t1',text:'水电走顶、强弱电分离（间距≥30cm）',done:false},
+        {id:'t2',text:'插座点位规划（宁多勿少）',done:false},
+        {id:'t3',text:'下水管道做隔音包管',done:false},
+        {id:'t4',text:'水电完工拍照 / 录像留底',done:false},
+        {id:'t5',text:'打压测试 + 电路绝缘验收',done:false},
+      ],guide:[
+        '水管走顶便于后期检修，漏水先发现自家吊顶而非楼下。',
+        '厨房、餐桌、沙发旁、马桶旁多留插座；智能马桶、净水器提前规划。',
+        '强弱电交叉处用锡箔纸包裹，减少信号干扰。',
+        '验收时做 0.8MPa 打压，30 分钟掉压不超过 0.05 才算合格。',
+      ]},
+      {id:'s4',name:'泥瓦',open:false,tasks:[
+        {id:'t1',text:'瓷砖充分泡水（瓷片类）',done:false},
+        {id:'t2',text:'卫生间地面找坡朝向地漏',done:false},
+        {id:'t3',text:'墙砖压地砖铺贴工艺',done:false},
+        {id:'t4',text:'做美缝而非传统填缝',done:false},
+        {id:'t5',text:'地漏处瓷砖居中铺贴',done:false},
+      ],guide:[
+        '吸水率高的瓷片必须泡到不冒泡再贴，否则易空鼓脱落。',
+        '卫生间坡度 1%-2%，泼水测试无积水才算过关。',
+        '墙压地工艺防水更好，先铺墙砖留最底一排，后铺地砖收口。',
+        '美缝防霉耐脏，厨卫湿区强烈建议做，别省这点钱。',
+      ]},
+      {id:'s5',name:'木工',open:false,tasks:[
+        {id:'t1',text:'吊顶龙骨间距符合规范',done:false},
+        {id:'t2',text:'板材环保等级确认（E0/E1）',done:false},
+        {id:'t3',text:'预留空调 / 新风 / 灯带位置',done:false},
+        {id:'t4',text:'定制柜尺寸现场复核',done:false},
+      ],guide:[
+        '主龙骨间距一般 ≤60cm，副龙骨 ≤40cm，过宽易开裂。',
+        '板材看清环保等级与检测报告，闻气味刺鼻的要警惕。',
+        '木工阶段就要把中央空调、新风、磁吸轨道灯的开孔留好。',
+        '定制柜复尺要在贴砖、吊顶完成后，避免缝隙过大。',
+      ]},
+      {id:'s6',name:'油漆',open:false,tasks:[
+        {id:'t1',text:'墙面基层挂网、找平',done:false},
+        {id:'t2',text:'腻子干透再刷下一遍',done:false},
+        {id:'t3',text:'一底两面标准工艺',done:false},
+        {id:'t4',text:'避开阴雨天气施工',done:false},
+        {id:'t5',text:'墙面颜色先试刷小样',done:false},
+      ],guide:[
+        '基层处理比漆本身更重要，裂缝处挂网防开裂。',
+        '腻子每层干透（通常 1-2 天）再批下一层，否则起皮。',
+        '标准为一遍底漆 + 两遍面漆，别被省成一遍面漆。',
+        '阴雨天湿度大不宜刷漆，容易发白、干得慢。',
+      ]},
+      {id:'s7',name:'安装',open:false,tasks:[
+        {id:'t1',text:'确定安装顺序（橱卫→灯具→五金）',done:false},
+        {id:'t2',text:'已完工面做好成品保护',done:false},
+        {id:'t3',text:'核对设备尺寸与预留孔位',done:false},
+        {id:'t4',text:'五金顺畅度与划痕验收',done:false},
+      ],guide:[
+        '顺序建议：橱柜→卫浴→木门→灯具→开关面板→五金→保洁。',
+        '安装前用地膜、护角保护地面与墙面阳角。',
+        '烟机、灶具、热水器尺寸务必与水电预留对齐再装。',
+        '收货当面验货，划痕、破损当场拒收并拍照。',
+      ]},
+      {id:'s8',name:'软装',open:false,tasks:[
+        {id:'t1',text:'家具先量尺寸后购买',done:false},
+        {id:'t2',text:'窗帘 / 地毯 / 配色统一风格',done:false},
+        {id:'t3',text:'灯光层次设计（主 + 辅 + 点）',done:false},
+        {id:'t4',text:'适度留白，避免过度堆砌',done:false},
+      ],guide:[
+        '沙发、床、餐桌下单前用纸板在地面模拟占地，确认过道。',
+        '同一空间主色不超过 3 种，冷暖统一更耐看。',
+        '3000K 暖光更温馨，书房用 4000K 中性光护眼。',
+        '先买大件再补小件，避免一次性买满显得拥挤。',
+      ]},
+      {id:'s9',name:'入住',open:false,tasks:[
+        {id:'t1',text:'通风 3-6 个月',done:false},
+        {id:'t2',text:'甲醛检测达标（≤0.08mg/m³）',done:false},
+        {id:'t3',text:'开荒保洁',done:false},
+        {id:'t4',text:'留存保修卡、发票、合同',done:false},
+        {id:'t5',text:'逐项试用各设备是否正常',done:false},
+      ],guide:[
+        '夏季通风 3 个月、冬季建议 6 个月再入住更稳妥。',
+        '关窗 12 小时后检测，甲醛 ≤0.08、TVOC ≤0.6 为达标。',
+        '开荒保洁重点：玻璃、橱柜内部、地漏、窗槽。',
+        '所有保修卡、说明书、发票统一归档，质保期心里有数。',
+      ]},
+    ],
+    budget:[
+      {id:'b1',name:'硬装',color:'#FF7A45',budget:80000,spent:0,expenses:[]},
+      {id:'b2',name:'主材',color:'#2DA3F8',budget:100000,spent:0,expenses:[]},
+      {id:'b3',name:'设备',color:'#34C759',budget:50000,spent:0,expenses:[]},
+      {id:'b4',name:'软装',color:'#A06BFF',budget:40000,spent:0,expenses:[]},
+    ],
+    todos:[
+      {id:'d1',text:'确定装修公司并签合同',priority:'high',deadline:'2026-10-20',done:false},
+      {id:'d2',text:'选购主卫瓷砖',priority:'mid',deadline:'2026-11-10',done:false},
+      {id:'d3',text:'预约水电验收',priority:'low',deadline:'',done:false},
+    ],
+    prep:{
+      docs:[
+        {id:'p1',text:'房产证 / 购房合同 + 身份证（业主本人，代办需委托书）',done:false},
+        {id:'p2',text:'装修申请表 + 装修图纸（平面图、水电走向图）',done:false},
+        {id:'p3',text:'装修押金 / 保证金（问清退费时限与条件）',done:false},
+        {id:'p4',text:'垃圾清运费（提前谈价，写进约定）',done:false},
+        {id:'p5',text:'结构安全承诺书（承诺不动承重墙 / 配重墙 / 剪力墙）',done:false},
+        {id:'p6',text:'工人出入证（按实际人数办理）',done:false},
+      ],
+      contract:[
+        {id:'c1',text:'工程概况：地址、面积、承包方式，写清"不含哪些项目"',done:false,tip:'拒绝模糊表述'},
+        {id:'c2',text:'工期 + 逾期违约金（如每天总价 0.5‰）',done:false,tip:'没违约金=拖延没成本'},
+        {id:'c3',text:'付款方式 3-3-3-1，尾款≥10% 留手',done:false,tip:'验收合格再付尾款'},
+        {id:'c4',text:'项目单价 / 工程量逐项列清单 + 单位 + 单价',done:false,tip:'拒绝"按实结算"'},
+        {id:'c5',text:'增项约定：增项不超过合同总价 5%',done:false,tip:'防低价切入后期狂加'},
+        {id:'c6',text:'材料品牌型号写死（附材料清单）',done:false,tip:'写"同档次"=留坑，必须写具体'},
+        {id:'c7',text:'验收标准引用国标（如 GB 50210）',done:false,tip:'没标准=工长说了算'},
+        {id:'c8',text:'保修：防水≥5 年、基础工程≥2 年',done:false,tip:'口头保修无效，写进合同'},
+        {id:'c9',text:'施工期间人身 / 邻里安全责任归属施工方',done:false,tip:'自装更要明确'},
+        {id:'c10',text:'环保标准：甲醛≤0.08mg/m³ 等',done:false,tip:'有娃/老人家庭重点'},
+        {id:'c11',text:'图纸 / 材料清单作为合同附件，签字盖章',done:false,tip:'附件与合同同等效力'},
+      ],
+    },
+  };
+}
+
+let S = load();
+function load(){
+  const s = seed();
+  try{
+    const d = JSON.parse(localStorage.getItem(STORAGE));
+    if(d && d.stages){
+      s.stages = d.stages;
+      s.budget = d.budget;
+      s.todos  = d.todos;
+      if(d.prep) s.prep = d.prep;   // 兼容旧数据，不覆盖用户已有内容
+      return s;
+    }
+  }catch(e){}
+  save(s); return s;
+}
+function save(s){ localStorage.setItem(STORAGE, JSON.stringify(s||S)); }
+
+/* ============ 工具 ============ */
+const fmt = n => '¥' + Math.round(n).toLocaleString('zh-CN');
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function today(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* 统计 */
+function stats(){
+  let total=0,done=0;
+  S.stages.forEach(s=>s.tasks.forEach(t=>{total++; if(t.done)done++;}));
+  const cur = S.stages.find(s=>!s.tasks.every(t=>t.done)) || S.stages[S.stages.length-1];
+  let bTotal=0,bSpent=0; S.budget.forEach(b=>{bTotal+=b.budget;bSpent+=b.spent;});
+  const pend = S.todos.filter(t=>!t.done);
+  const overdue = pend.filter(t=>t.deadline && t.deadline<today());
+  return {total,done,cur,bTotal,bSpent,pend,overdue,pendN:pend.length};
+}
+
+/* ============ 渲染 ============ */
+let curTab='overview';
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('#nav .tab').forEach(el=>el.classList.toggle('active',el.dataset.t===t));
+  render();
+}
+function render(){
+  const v=document.getElementById('view');
+  if(curTab==='overview') v.innerHTML=renderOverview();
+  else if(curTab==='process') v.innerHTML=renderProcess();
+  else if(curTab==='budget') v.innerHTML=renderBudget();
+  else if(curTab==='todo') v.innerHTML=renderTodo();
+  else if(curTab==='prep') v.innerHTML=renderPrep();
+}
+
+function renderOverview(){
+  const st=stats();
+  const pct = st.total? Math.round(st.done/st.total*100):0;
+  const bPct = st.bTotal? (st.bSpent/st.bTotal*100):0;
+  const over = st.bSpent>st.bTotal;
+  // 前期准备完成度
+  const prepDocs = S.prep.docs, prepCon = S.prep.contract;
+  const pd = prepDocs.filter(x=>x.done).length, pc = prepCon.filter(x=>x.done).length;
+  const pAll = prepDocs.length+prepCon.length, pDone = pd+pc;
+  const pPct = pAll? Math.round(pDone/pAll*100):0;
+  const pdPct = prepDocs.length? Math.round(pd/prepDocs.length*100):0;
+  const pcPct = prepCon.length? Math.round(pc/prepCon.length*100):0;
+  // 当前阶段未完成项
+  const curTasks = st.cur.tasks.filter(t=>!t.done);
+  const nextHtml = curTasks.length? curTasks.slice(0,4).map(t=>
+    `<div class="next-item"><div class="box"></div><div class="txt">${esc(t.text)}</div></div>`
+  ).join('') : `<div class="empty">🎉 当前阶段任务已全部完成！</div>`;
+
+  return `
+  <div class="card hero">
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg width="84" height="84">
+          <circle cx="42" cy="42" r="36" stroke="#FFD9C7" stroke-width="9" fill="none"/>
+          <circle cx="42" cy="42" r="36" stroke="#FF6B3D" stroke-width="9" fill="none"
+            stroke-linecap="round" stroke-dasharray="${2*Math.PI*36}"
+            stroke-dashoffset="${2*Math.PI*36*(1-pct/100)}"/>
+        </svg>
+        <div class="pct">${pct}%</div>
+      </div>
+      <div class="meta">
+        当前阶段<br>
+        <span class="stage-name">${esc(st.cur.name)}</span><br>
+        整体进度 <b>${st.done}/${st.total}</b> 项
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat ${over?'warn':'ok'}"><div class="num">${bPct.toFixed(0)}%</div><div class="lbl">预算使用</div></div>
+    <div class="stat"><div class="num">${st.pendN}</div><div class="lbl">待办事项</div></div>
+    <div class="stat ${st.overdue.length?'warn':'ok'}"><div class="num">${st.overdue.length}</div><div class="lbl">已逾期</div></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>下一步该做什么</h3>
+    ${nextHtml}
+    <button class="btn ghost" style="margin-top:12px" onclick="switchTab('process')">查看完整流程 →</button>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>前期准备进度</h3>
+    <div class="budget-total">
+      <div class="big" style="font-size:20px">${pPct}% <small style="font-size:12px;color:var(--ink-2)">${pDone}/${pAll}</small></div>
+      <button class="btn ghost" style="width:auto;padding:8px 14px" onclick="switchTab('prep')">去准备 →</button>
+    </div>
+    <div class="bar"><i style="width:${pPct}%"></i></div>
+    <div style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>📋 办证手续</span><span style="color:var(--ink-2)">${pd}/${prepDocs.length}</span></div>
+      <div class="bar"><i style="width:${pdPct}%"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin:10px 0 4px"><span>📝 合同核对</span><span style="color:var(--ink-2)">${pc}/${prepCon.length}</span></div>
+      <div class="bar"><i style="width:${pcPct}%"></i></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>预算速览</h3>
+    <div class="budget-total">
+      <div class="big">${fmt(st.bSpent)} <small>/ ${fmt(st.bTotal)}</small></div>
+      <div class="tag ${over?'over':'ok'}">${over?'超支 '+fmt(st.bSpent-st.bTotal):'未超支'}</div>
+    </div>
+    <div class="bar ${over?'over':''}"><i style="width:${Math.min(bPct,100)}%"></i></div>
+    <button class="btn ghost" style="margin-top:12px" onclick="switchTab('budget')">管理预算 →</button>
+  </div>`;
+}
+
+function renderProcess(){
+  return S.stages.map((s,i)=>{
+    const done=s.tasks.filter(t=>t.done).length;
+    const allDone = done===s.tasks.length;
+    const open = s.open?'open':'';
+    const tasksHtml = s.tasks.map(t=>`
+      <div class="task ${t.done?'done':''}" onclick="toggleTask('${s.id}','${t.id}')">
+        <div class="box">${t.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
+        <div class="txt">${esc(t.text)}</div>
+      </div>`).join('');
+    const guideHtml = s.guide.map(g=>`<li>${esc(g)}</li>`).join('');
+    return `
+    <div class="card stage-card ${open} ${allDone?'done':''}">
+      <div class="head" onclick="toggleStage('${s.id}')">
+        <div class="idx">${i+1}</div>
+        <div class="name">${esc(s.name)} ${allDone?'✅':''}</div>
+        <div class="prog">${done}/${s.tasks.length}</div>
+        <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="stage-body">
+        ${tasksHtml}
+        <div class="guide">
+          <div class="gt">⚠️ 避坑指南</div>
+          <ul style="margin:0;padding-left:18px">${guideHtml}</ul>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBudget(){
+  const st=stats();
+  const bPct = st.bTotal? (st.bSpent/st.bTotal*100):0;
+  const over = st.bSpent>st.bTotal;
+  const cats = S.budget.map(b=>{
+    const p = b.budget? (b.spent/b.budget*100):0;
+    const isOver = b.spent>b.budget;
+    const recent = b.expenses.slice(-3).reverse().map(e=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);padding:3px 0;border-bottom:1px dashed var(--line)"><span>${esc(e.note||'支出')}</span><span>${fmt(e.amount)}</span></div>`).join('');
+    return `
+    <div class="cat ${isOver?'over':''}">
+      <div class="top">
+        <div class="nm"><span class="swatch" style="background:${b.color}"></span>${esc(b.name)}</div>
+        <div class="amt"><b>${fmt(b.spent)}</b> / ${fmt(b.budget)}
+          <span class="edit-budget" onclick="editBudget('${b.id}')">改额度</span></div>
+      </div>
+      <div class="bar ${isOver?'over':''}"><i style="width:${Math.min(p,100)}%"></i></div>
+      <div style="font-size:12px;color:var(--ink-2);margin-top:5px">已用 ${p.toFixed(0)}%${isOver?` · 超 ${fmt(b.spent-b.budget)}`:''}</div>
+      <div class="alert">⚠️ 该类已超支，注意控制后续支出！</div>
+      ${recent?`<div style="margin-top:8px">${recent}</div>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="card">
+    <div class="budget-total">
+      <div class="big">${fmt(st.bSpent)} <small>/ ${fmt(st.bTotal)}</small></div>
+      <div class="tag ${over?'over':'ok'}">${over?'超支 '+fmt(st.bSpent-st.bTotal):'未超支'}</div>
+    </div>
+    <div class="bar ${over?'over':''}"><i style="width:${Math.min(bPct,100)}%"></i></div>
+    <button class="btn" style="margin-top:14px" onclick="addExpense()">＋ 记一笔支出</button>
+  </div>
+  ${cats}`;
+}
+
+function renderTodo(){
+  const list = S.todos.length? S.todos.map(t=>{
+    const over = !t.done && t.deadline && t.deadline<today();
+    const pTxt = {high:'高',mid:'中',low:'低'}[t.priority];
+    const dateHtml = t.deadline? `<span class="pill date ${over?'over':''}">${t.deadline}${over?' · 逾期':''}</span>`:'';
+    return `
+    <div class="todo ${t.done?'done':''}">
+      <div class="box" onclick="toggleTodo('${t.id}')">${t.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
+      <div class="body">
+        <div class="tt">${esc(t.text)}</div>
+        <div class="meta">
+          <span class="pill ${t.priority}">${pTxt}优先</span>
+          ${dateHtml}
+        </div>
+      </div>
+      <div class="del" onclick="delTodo('${t.id}')">🗑</div>
+    </div>`;
+  }).join('') : `<div class="empty">📝 还没有待办，点击下方按钮添加</div>`;
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 2px">
+    <span style="font-size:14px;color:var(--ink-2)">共 ${S.todos.length} 项 · 未完成 ${stats().pendN} 项</span>
+  </div>
+  ${list}
+  <button class="btn" style="margin-top:6px" onclick="editTodo()">＋ 添加待办</button>`;
+}
+
+function renderPrep(){
+  const sec = (title, type, icon)=>{
+    const arr = S.prep[type];
+    const done = arr.filter(x=>x.done).length;
+    const pct = arr.length? Math.round(done/arr.length*100):0;
+    const items = arr.map(x=>{
+      const note = x.note?`<div class="prep-note">📝 ${esc(x.note)}</div>`:'';
+      const photos = (x.photos&&x.photos.length)?`<div class="prep-photos">${x.photos.map(src=>`<img src="${src}" onclick="zoomPhoto('${encodeURIComponent(src)}')">`).join('')}</div>`:'';
+      return `
+      <div class="task ${x.done?'done':''}" onclick="togglePrep('${type}','${x.id}')">
+        <div class="box">${x.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
+        <div class="txt">${esc(x.text)}${x.tip?`<span style="display:block;font-size:12px;color:var(--ink-2);margin-top:3px">💡 ${esc(x.tip)}</span>`:''}${note}${photos}</div>
+        <div class="edit" onclick="editPrepItem('${type}','${x.id}');event.stopPropagation()">✎</div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="card">
+      <h3><span class="dot"></span>${icon} ${title}</h3>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div style="font-size:12px;color:var(--ink-2);margin:6px 0 10px">已完成 ${done}/${arr.length}</div>
+      ${items}
+    </div>`;
+  };
+  return `
+  <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openContract()">
+    <div style="font-size:30px">📄</div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:15px">装修合同参考范本</div>
+      <div style="font-size:12px;color:var(--ink-2);margin-top:2px">家庭装修施工合同 · 12 条正文，点开查看 / 一键复制</div>
+    </div>
+    <div style="color:var(--ink-2);font-size:18px">›</div>
+  </div>`
+       + sec('办证 / 物业手续清单','docs','📋')
+       + sec('装修合同避坑条款核对','contract','📝');
+}
+
+/* ============ 合同参考范本 ============ */
+const CONTRACT_SECTIONS = [
+  {t:'合同双方',p:['发包方（甲方）：＿＿＿　身份证号：＿＿＿　联系电话：＿＿＿','承包方（乙方）：＿＿＿　身份证/统一社会信用代码：＿＿＿　联系电话：＿＿＿','施工负责人：＿＿＿（工长）　联系电话：＿＿＿']},
+  {t:'第一条　工程概况',p:['1. 工程地址：＿＿＿＿＿＿；','2. 建筑面积＿＿㎡（使用面积＿＿㎡），户型＿室＿厅＿卫；','3. 承包方式：□清包（包工不包料）□半包（包工+辅料）□全包；','4. 合同总价：人民币＿＿＿元（大写：＿＿＿）。除第六条约定情形外，乙方不得以任何理由要求增加费用。']},
+  {t:'第二条　施工工期',p:['1. 开工日期＿＿年＿＿月＿＿日，竣工日期＿＿年＿＿月＿＿日，总工期＿＿天；','2. 因甲方原因（材料未按时到位、方案变更等）或不可抗力导致停工的，工期顺延，双方书面确认；','3. 因乙方原因延误工期的，每延误一日，按合同总价的＿＿‰支付违约金（建议不低于 0.5‰）。']},
+  {t:'第三条　付款方式',p:['双方约定按工程进度分四期支付（建议 3-3-3-1）：','第一期（开工前）：＿＿％，即＿＿元；','第二期（水电验收合格后）：＿＿％，即＿＿元；','第三期（泥木工程验收合格后）：＿＿％，即＿＿元；','第四期（竣工验收合格后＿＿日内）：尾款＿＿％，且不低于合同总价的 10%。','尾款未付清前，乙方保修义务不受影响。']},
+  {t:'第四条　材料与设备',p:['1. 甲方自购主材见附件《主材清单》，乙方辅材见附件《辅材清单》；','2. 所有材料须为合同约定的品牌、系列、型号，乙方进场时应通知甲方验收签字；未经甲方签字认可的材料不得使用；','3. 乙方擅自更换、以次充好的，甲方有权要求无条件更换并索赔损失；','4. 材料损耗率：瓷砖＿＿％、地板＿＿％（建议瓷砖不超 5%~8%），超出部分由乙方承担。']},
+  {t:'第五条　图纸与施工依据',p:['1. 本工程依据附件图纸施工：《平面布置图》《水电点位图》《吊顶/立面图》，附件与合同具有同等法律效力；','2. 施工中甲方变更设计，须书面通知乙方，因此增加的费用由甲方承担，工期相应顺延。']},
+  {t:'第六条　工程变更与增项',p:['1. 施工过程中新增项目须双方书面（含微信文字记录）确认价格后方可施工；','2. 全部增项累计金额不得超过合同总价的 5%，超出部分甲方有权拒付；','3. 乙方隐瞒增项、先施工后报价的，甲方有权不支付该项费用。']},
+  {t:'第七条　质量与验收',p:['1. 工程质量执行国家标准 GB 50210《建筑装饰装修工程质量验收标准》及 GB 50327《住宅装饰装修工程施工规范》；','2. 隐蔽工程（水电等）封闭前，乙方须通知甲方验收并拍照留档，甲方签字后方可封闭；未经验收擅自封闭的，甲方有权要求无偿揭开复验；','3. 各阶段验收不合格的，乙方限期整改，整改费用自担，工期不予顺延；','4. 室内环境：完工后甲醛≤0.08mg/m³、苯≤0.09mg/m³（GB/T 18883），甲方有权委托检测，不合格由乙方治理并承担费用。']},
+  {t:'第八条　保修',p:['1. 防水工程保修期不少于 5 年；水电等隐蔽工程及基础工程保修期不少于 2 年，自竣工验收合格之日起算；','2. 保修期内出现质量问题，乙方接到通知后＿＿小时内响应，＿＿日内维修完毕；逾期不修的，甲方可另请他人维修，费用从保修金中扣除。']},
+  {t:'第九条　安全与文明施工',p:['1. 施工期间乙方施工人员的人身安全及第三方安全责任，均由乙方承担，与甲方无关；','2. 乙方应遵守物业管理规定，不拆改承重墙、配重墙、剪力墙，不占用公共区域堆放材料；','3. 因乙方施工造成邻里损失的（渗漏、噪音投诉等），由乙方负责赔偿处理。']},
+  {t:'第十条　违约责任',p:['1. 甲方无正当理由中途解除合同的，已完成部分按实结算，另按合同总价＿＿％支付乙方赔偿；','2. 乙方无正当理由中途停工或解除合同的，按合同总价＿＿％支付甲方违约金，并赔偿甲方由此产生的损失；','3. 任何一方违约，守约方为实现债权支出的合理费用（诉讼费、律师费）由违约方承担。']},
+  {t:'第十一条　争议解决',p:['本合同履行中发生争议，双方协商解决；协商不成的，向工程所在地人民法院起诉。']},
+  {t:'第十二条　补充条款',p:['1. 乙方口头承诺事项汇总（逐条写清，越具体越好）：＿＿＿＿；','2. ＿＿＿＿＿＿；','3. 本合同一式两份，甲乙双方各执一份，自双方签字之日起生效。']},
+];
+function contractHTML(){
+  return `<div style="text-align:center;margin-bottom:12px">
+    <div style="font-size:17px;font-weight:800">家庭装修施工合同（参考范本）</div>
+    <div style="font-size:11px;color:var(--ink-2);margin-top:4px">合同编号：＿＿＿＿＿＿　签订地点：＿＿＿＿　签订日期：＿＿年＿＿月＿＿日</div>
+  </div>` + CONTRACT_SECTIONS.map(s=>`
+    <h4 style="margin:14px 0 6px;font-size:14px;font-weight:700;color:var(--ink)">${s.t}</h4>
+    ${s.p.map(line=>`<p style="margin:4px 0;font-size:13px;line-height:1.7;color:var(--ink-2)">${line}</p>`).join('')}`).join('')
+  + `<div style="display:flex;justify-content:space-between;margin-top:22px;font-size:13px;color:var(--ink-2)"><span>甲方（签字）：＿＿＿＿＿</span><span>乙方（签字/盖章）：＿＿＿＿＿</span></div>`;
+}
+function contractPlainText(){
+  let t='家庭装修施工合同（参考范本）\n合同编号：＿＿＿＿＿＿　签订地点：＿＿＿＿　签订日期：＿＿年＿＿月＿＿日\n';
+  CONTRACT_SECTIONS.forEach(s=>{ t+='\n'+s.t+'\n'+s.p.join('\n')+'\n'; });
+  t+='\n甲方（签字）：＿＿＿＿＿　　乙方（签字/盖章）：＿＿＿＿＿';
+  return t;
+}
+function openContract(){
+  const m=document.createElement('div');
+  m.id='contractModal';
+  m.style.cssText='position:fixed;inset:0;background:#fff;z-index:98;display:flex;flex-direction:column';
+  m.innerHTML=`
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:#fff">
+      <div style="font-weight:800;font-size:15px">📄 合同参考范本</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="padding:6px 12px;font-size:12px" onclick="copyContract()">📋 复制全文</button>
+        <button class="btn cancel" style="padding:6px 12px;font-size:12px" onclick="document.getElementById('contractModal').remove()">关闭</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 16px 80px" onclick="event.stopPropagation()">${contractHTML()}</div>
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 16px;border-top:1px solid var(--line);background:#fff">
+      <button class="btn" style="width:100%" onclick="copyContract()">📋 复制全文，粘贴后填空即可用</button>
+    </div>`;
+  document.body.appendChild(m);
+}
+function copyContract(){
+  const txt=contractPlainText();
+  const ok=()=>{ const b=document.querySelector('#contractModal .btn'); const o=b.textContent; b.textContent='✓ 已复制'; setTimeout(()=>b.textContent=o,1500); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok).catch(()=>fallbackCopy(txt,ok)); }
+  else fallbackCopy(txt,ok);
+}
+function fallbackCopy(txt,ok){
+  const ta=document.createElement('textarea'); ta.value=txt; ta.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); ok(); }catch(e){ alert('复制失败，请长按文本手动选择复制'); }
+  ta.remove();
+}
+function togglePrep(type,id){
+  const x = S.prep[type].find(y=>y.id===id); x.done=!x.done; save(); render();
+}
+
+/* 前期准备：备注 + 照片 */
+function editPrepItem(type,id){
+  const x = S.prep[type].find(y=>y.id===id);
+  const ph = (x.photos||[]).map((src,i)=>`
+    <div style="position:relative">
+      <img src="${src}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">
+      <div onclick="delPrepPhoto('${type}','${id}',${i})" style="position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">×</div>
+    </div>`).join('');
+  openSheet(`
+    <h4>备注 / 照片</h4>
+    <div class="field"><label>备注</label><textarea id="pp_note" placeholder="如：合同第3条已补充增项上限5%">${esc(x.note||'')}</textarea></div>
+    <div class="field"><label>上传照片（合同页、盖章页等，自动压缩）</label>
+      <input id="pp_file" type="file" accept="image/*" multiple onchange="addPrepPhoto('${type}','${id}')">
+      <div class="prep-photos" style="margin-top:8px">${ph}</div>
+    </div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">关闭</button>
+      <button class="btn" onclick="savePrepItem('${type}','${id}')">保存备注</button>
+    </div>`);
+}
+function addPrepPhoto(type,id){
+  const x = S.prep[type].find(y=>y.id===id);
+  const ta = document.getElementById('pp_note'); if(ta) x.note = ta.value; // 暂存备注，避免重渲染丢失
+  if(!x.photos) x.photos=[];
+  const files = document.getElementById('pp_file').files;
+  if(!files.length){ editPrepItem(type,id); return; }
+  let pending = files.length;
+  for(const f of files){
+    resizeImage(f, 640, 0.7, url=>{
+      x.photos.push(url); save();
+      if(--pending===0) editPrepItem(type,id);
+    });
+  }
+}
+function delPrepPhoto(type,id,i){
+  const x = S.prep[type].find(y=>y.id===id);
+  x.photos.splice(i,1); save(); editPrepItem(type,id);
+}
+function savePrepItem(type,id){
+  const x = S.prep[type].find(y=>y.id===id);
+  const ta = document.getElementById('pp_note'); if(ta) x.note = ta.value.trim();
+  save(); closeSheet(); render();
+}
+function resizeImage(file,maxW,q,cb){
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',q));
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+function zoomPhoto(src){
+  const url=decodeURIComponent(src);
+  const m=document.createElement('div');
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.onclick=()=>m.remove();
+  const im=document.createElement('img'); im.src=url; im.style.cssText='max-width:100%;max-height:100%;border-radius:10px';
+  m.appendChild(im); document.body.appendChild(m);
+}
+
+/* ============ 交互 ============ */
+function toggleStage(id){ const s=S.stages.find(x=>x.id===id); s.open=!s.open; save(); render(); }
+function toggleTask(sid,tid){
+  const s=S.stages.find(x=>x.id===sid); const t=s.tasks.find(x=>x.id===tid);
+  t.done=!t.done; save(); render();
+}
+function toggleTodo(id){ const t=S.todos.find(x=>x.id===id); t.done=!t.done; save(); render(); }
+function delTodo(id){ S.todos=S.todos.filter(x=>x.id!==id); save(); render(); }
+
+/* 弹窗 */
+function openSheet(html){ document.getElementById('sheet').innerHTML=html; document.getElementById('mask').classList.add('show'); }
+function closeSheet(){ document.getElementById('mask').classList.remove('show'); }
+
+/* 预算：记一笔 */
+function addExpense(){
+  const opts = S.budget.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  openSheet(`
+    <h4>＋ 记一笔支出</h4>
+    <div class="field"><label>类别</label><select id="ex_cat">${opts}</select></div>
+    <div class="field"><label>金额（元）</label><input id="ex_amt" type="number" inputmode="decimal" placeholder="如 3500"></div>
+    <div class="field"><label>备注（选填）</label><input id="ex_note" placeholder="如 客厅地砖"></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      <button class="btn" onclick="submitExpense()">保存</button>
+    </div>`);
+}
+function submitExpense(){
+  const cat=document.getElementById('ex_cat').value;
+  const amt=parseFloat(document.getElementById('ex_amt').value);
+  const note=document.getElementById('ex_note').value.trim();
+  if(!amt||amt<=0){ alert('请输入有效金额'); return; }
+  const b=S.budget.find(x=>x.id===cat);
+  b.spent += amt;
+  b.expenses.push({id:uid(),amount:amt,note,date:today()});
+  save(); closeSheet(); render();
+}
+function editBudget(id){
+  const b=S.budget.find(x=>x.id===id);
+  openSheet(`
+    <h4>修改「${esc(b.name)}」预算额度</h4>
+    <div class="field"><label>预算金额（元）</label><input id="bd_val" type="number" inputmode="decimal" value="${b.budget}"></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      <button class="btn" onclick="submitBudget('${id}')">保存</button>
+    </div>`);
+}
+function submitBudget(id){
+  const v=parseFloat(document.getElementById('bd_val').value);
+  if(!v||v<=0){ alert('请输入有效金额'); return; }
+  S.budget.find(x=>x.id===id).budget=v; save(); closeSheet(); render();
+}
+
+/* 待办：新增/编辑 */
+function editTodo(id){
+  const t = id? S.todos.find(x=>x.id===id):null;
+  const pr = t? t.priority:'mid';
+  openSheet(`
+    <h4>${id?'编辑待办':'添加待办'}</h4>
+    <div class="field"><label>事项</label><textarea id="td_text" placeholder="如 选购主卫瓷砖">${t?esc(t.text):''}</textarea></div>
+    <div class="field"><label>优先级</label>
+      <div class="seg" id="td_seg">
+        <button data-v="high" class="${pr==='high'?'on':''}">高</button>
+        <button data-v="mid" class="${pr==='mid'?'on':''}">中</button>
+        <button data-v="low" class="${pr==='low'?'on':''}">低</button>
+      </div>
+    </div>
+    <div class="field"><label>截止日期（选填）</label><input id="td_date" type="date" value="${t?t.deadline:''}"></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      ${id?`<button class="btn ghost" onclick="delTodo('${id}');closeSheet()">删除</button>`:''}
+      <button class="btn" onclick="submitTodo('${id||''}')">保存</button>
+    </div>`);
+  document.querySelectorAll('#td_seg button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#td_seg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+  });
+}
+function submitTodo(id){
+  const text=document.getElementById('td_text').value.trim();
+  const pr=document.querySelector('#td_seg button.on').dataset.v;
+  const date=document.getElementById('td_date').value;
+  if(!text){ alert('请输入事项内容'); return; }
+  if(id){ Object.assign(S.todos.find(x=>x.id===id),{text,priority:pr,deadline:date}); }
+  else S.todos.push({id:uid(),text,priority:pr,deadline:date,done:false});
+  save(); closeSheet(); render();
+}
+
+function resetAll(){
+  if(confirm('确定要清空所有数据并恢复初始示例吗？此操作不可撤销。')){
+    S=seed(); save(); render();
+  }
+}
+
+/* 启动 */
+render();
+</script>
+</body>
+</html>
