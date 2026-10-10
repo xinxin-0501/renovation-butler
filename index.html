@@ -219,7 +219,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.5</b>（前期准备 + 合同范本 + 采购比价 + 案例参考）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.6</b>（前期准备 + 合同范本 + 采购比价 + 案例参考 + 阶段材料清单）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -265,6 +265,19 @@
 <script>
 /* ============ 初始数据 ============ */
 const STORAGE = 'renovation_butler_v1';
+
+/* 各阶段需购材料清单（v2.6，通用清单，数量按自家面积核算；价格请到「比价」页实测录入） */
+const STAGE_MATS = {
+  s1:['空鼓锤、卷尺、验电笔、水平尺（验房工具）','记号笔 + 贴纸（标记问题处）','水桶（测下水/闭水）','手电筒 / 手机支架（拍照留证）'],
+  s2:['地面保护膜 / 保护板','红砖 / 轻质砖 + 水泥 + 沙子（如需砌墙）','临时马桶（如工期长）','灭火器（施工现场必备）'],
+  s3:['电线（照明2.5㎡ / 插座4㎡ / 空调6㎡）','网线（建议超六类）','PVC 穿线管 + 底盒 + 锁母','PPR 水管及管件（冷热分管）','强弱电交叉锡箔纸屏蔽','生料带 / 绝缘胶布'],
+  s4:['瓷砖 / 地砖（按面积+10%损耗）','水泥、沙子','瓷砖胶 / 背胶（玻化砖必用）','防水涂料（厨卫墙面1.8m高）','地漏（干湿区 / 洗衣机款）','美缝剂','过门石 / 窗台石'],
+  s5:['轻钢龙骨 / 木龙骨（吊顶）','石膏板','板材（环保等级 E0/E1）','磁吸轨道 / 灯带（预留开槽）','收边条 / 枪钉 / 白乳胶'],
+  s6:['腻子粉（耐水型）','网格带 / 牛皮纸带（防裂）','阴阳角条','底漆 + 面漆（一底两面用量）','砂纸 / 滚筒 / 刷具'],
+  s7:['橱柜 / 浴室柜','卫浴洁具（马桶、花洒、龙头、角阀软管）','木门及门锁五金','烟机 / 灶具 / 热水器','灯具 / 开关插座面板','窗帘杆 / 五金挂件'],
+  s8:['沙发 / 餐桌椅 / 床垫','窗帘 / 地毯','灯具补充（落地灯 / 筒射灯）','装饰画 / 绿植 / 摆件'],
+  s9:['甲醛检测盒（或委托 CMA 检测）','活性炭包','绿植（辅助净化）','入户地垫 / 收纳用品'],
+};
 
 function seed(){
   return {
@@ -410,6 +423,7 @@ function seed(){
       ],
     },
     purchases:[],
+    matDone:{},   // 阶段材料勾选状态（v2.6），key: `${stageId}:${idx}`
     cases:{ selSpace:'', selSub:'',
       spaces:['客厅','厨房','卧室','阳台','卫生间','书房'],
       subs:['电视墙','沙发','吊顶','灯光','收纳','瓷砖'],
@@ -430,6 +444,7 @@ function load(){
       if(d.prep) s.prep = d.prep;   // 兼容旧数据，不覆盖用户已有内容
       if(d.purchases) s.purchases = d.purchases;  // 比价数据兼容（v2.3）
       if(d.cases) s.cases = d.cases;              // 案例参考兼容（v2.5）
+      if(d.matDone) s.matDone = d.matDone;        // 阶段材料勾选兼容（v2.6）
       return s;
     }
   }catch(e){}
@@ -559,6 +574,19 @@ function renderProcess(){
         <div class="txt">${esc(t.text)}</div>
       </div>`).join('');
     const guideHtml = s.guide.map(g=>`<li>${esc(g)}</li>`).join('');
+    const mats = STAGE_MATS[s.id]||[];
+    const mDone = mats.filter((m,i)=>S.matDone[s.id+':'+i]).length;
+    const matsHtml = mats.length?`
+      <div class="guide" style="background:#fff6ef">
+        <div class="gt">🛒 本阶段需购材料 <span style="font-weight:400;font-size:11px;color:var(--ink-2)">（已备 ${mDone}/${mats.length}）</span></div>
+        ${mats.map((m,i)=>{
+          const k=s.id+':'+i, on=!!S.matDone[k];
+          return `<div class="task ${on?'done':''}" onclick="toggleMat('${s.id}',${i})">
+            <div class="box">${on?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
+            <div class="txt">${esc(m)}</div>
+          </div>`;}).join('')}
+        <div style="font-size:11px;color:var(--ink-2);margin-top:6px">💡 数量按自家面积核算；价格可到「比价」页添加采购项，对比各渠道报价后再买。</div>
+      </div>`:'';
     return `
     <div class="card stage-card ${open} ${allDone?'done':''}">
       <div class="head" onclick="toggleStage('${s.id}')">
@@ -569,6 +597,7 @@ function renderProcess(){
       </div>
       <div class="stage-body">
         ${tasksHtml}
+        ${matsHtml}
         <div class="guide">
           <div class="gt">⚠️ 避坑指南</div>
           <ul style="margin:0;padding-left:18px">${guideHtml}</ul>
@@ -1155,6 +1184,7 @@ function toggleTask(sid,tid){
   t.done=!t.done; save(); render();
 }
 function toggleTodo(id){ const t=S.todos.find(x=>x.id===id); t.done=!t.done; save(); render(); }
+function toggleMat(sid,i){ const k=sid+':'+i; S.matDone[k]=!S.matDone[k]; save(); render(); }
 function delTodo(id){ S.todos=S.todos.filter(x=>x.id!==id); save(); render(); }
 
 /* 弹窗 */
