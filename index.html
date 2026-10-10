@@ -219,7 +219,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.6</b>（前期准备 + 合同范本 + 采购比价 + 案例参考 + 阶段材料清单）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.7</b>（流程含前期准备 + 合同范本 + 采购比价 + 案例参考 + 阶段材料清单）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -241,10 +241,6 @@
     <div class="tab" data-t="todo" onclick="switchTab('todo')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
       待办
-    </div>
-    <div class="tab" data-t="prep" onclick="switchTab('prep')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6a1 1 0 0 1 1 1v2h2a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V3a1 1 0 0 1 1-1z"/><path d="M9 4h6v3H9z"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-      前期
     </div>
     <div class="tab" data-t="price" onclick="switchTab('price')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><circle cx="7" cy="7" r="1.5"/></svg>
@@ -482,7 +478,6 @@ function render(){
   else if(curTab==='process') v.innerHTML=renderProcess();
   else if(curTab==='budget') v.innerHTML=renderBudget();
   else if(curTab==='todo') v.innerHTML=renderTodo();
-  else if(curTab==='prep') v.innerHTML=renderPrep();
   else if(curTab==='cases') v.innerHTML=renderCases();
   else if(curTab==='price') v.innerHTML=renderPrice();
 }
@@ -541,7 +536,7 @@ function renderOverview(){
     <h3><span class="dot"></span>前期准备进度</h3>
     <div class="budget-total">
       <div class="big" style="font-size:20px">${pPct}% <small style="font-size:12px;color:var(--ink-2)">${pDone}/${pAll}</small></div>
-      <button class="btn ghost" style="width:auto;padding:8px 14px" onclick="switchTab('prep')">去准备 →</button>
+      <button class="btn ghost" style="width:auto;padding:8px 14px" onclick="switchTab('process')">去流程准备 →</button>
     </div>
     <div class="bar"><i style="width:${pPct}%"></i></div>
     <div style="margin-top:12px">
@@ -564,7 +559,41 @@ function renderOverview(){
 }
 
 function renderProcess(){
-  return S.stages.map((s,i)=>{
+  // 前期准备：并入流程最上方（合同范本 + 办证清单 + 合同核对）
+  const prepSec = (title, type, icon)=>{
+    const arr = S.prep[type];
+    const done = arr.filter(x=>x.done).length;
+    const pct = arr.length? Math.round(done/arr.length*100):0;
+    const items = arr.map(x=>{
+      const note = x.note?`<div class="prep-note">📝 ${esc(x.note)}</div>`:'';
+      const photos = (x.photos&&x.photos.length)?`<div class="prep-photos">${x.photos.map(src=>`<img src="${src}" onclick="zoomPhoto('${encodeURIComponent(src)}')">`).join('')}</div>`:'';
+      return `
+      <div class="task ${x.done?'done':''}" onclick="togglePrep('${type}','${x.id}')">
+        <div class="box">${x.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
+        <div class="txt">${esc(x.text)}${x.tip?`<span style="display:block;font-size:12px;color:var(--ink-2);margin-top:3px">💡 ${esc(x.tip)}</span>`:''}${note}${photos}</div>
+        <div class="edit" onclick="editPrepItem('${type}','${x.id}');event.stopPropagation()">✎</div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="card">
+      <h3><span class="dot"></span>${icon} ${title}</h3>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div style="font-size:12px;color:var(--ink-2);margin:6px 0 10px">已完成 ${done}/${arr.length}</div>
+      ${items}
+    </div>`;
+  };
+  const prepBlock = `
+  <div class="card" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openContract()">
+    <div style="font-size:30px">📄</div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:15px">装修合同参考范本</div>
+      <div style="font-size:12px;color:var(--ink-2);margin-top:2px">家庭装修施工合同 · 12 条正文，点开查看 / 一键复制</div>
+    </div>
+    <div style="color:var(--ink-2);font-size:18px">›</div>
+  </div>`
+  + prepSec('办证 / 物业手续清单','docs','📋')
+  + prepSec('装修合同避坑条款核对','contract','📝');
+  return prepBlock + S.stages.map((s,i)=>{
     const done=s.tasks.filter(t=>t.done).length;
     const allDone = done===s.tasks.length;
     const open = s.open?'open':'';
