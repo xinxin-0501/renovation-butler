@@ -206,7 +206,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.2</b>（含前期准备 + 合同范本）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.3</b>（含前期准备 + 合同范本 + 采购比价）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -232,6 +232,10 @@
     <div class="tab" data-t="prep" onclick="switchTab('prep')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6a1 1 0 0 1 1 1v2h2a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V3a1 1 0 0 1 1-1z"/><path d="M9 4h6v3H9z"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
       前期
+    </div>
+    <div class="tab" data-t="price" onclick="switchTab('price')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><circle cx="7" cy="7" r="1.5"/></svg>
+      比价
     </div>
   </nav>
 </div>
@@ -388,6 +392,18 @@ function seed(){
         {id:'c11',text:'图纸 / 材料清单作为合同附件，签字盖章',done:false,tip:'附件与合同同等效力'},
       ],
     },
+    purchases:[
+      {id:'pc1',name:'客厅地砖 800×800（约120片）',cat:'硬装主材',budget:8000,ordered:null,quotes:[
+        {id:'q1',channel:'建材市场 A 店',price:7800,note:'含送货上楼'},
+        {id:'q2',channel:'电商旗舰店',price:7080,note:'满额包邮，7天价保'},
+        {id:'q3',channel:'小区团购',price:6600,note:'50片起送，需押金'},
+      ]},
+      {id:'pc2',name:'冰箱 BCD-450',cat:'电器',budget:4000,ordered:{qid:'q11',price:3650,channel:'京东',date:'2026-10-10',rec:false},quotes:[
+        {id:'q10',channel:'天猫',price:3799,note:'含以旧换新补贴'},
+        {id:'q11',channel:'京东',price:3650,note:'价保30天'},
+      ]},
+      {id:'pc3',name:'乳胶漆 18L 套装',cat:'硬装主材',budget:1500,ordered:null,quotes:[]},
+    ],
   };
 }
 
@@ -401,6 +417,7 @@ function load(){
       s.budget = d.budget;
       s.todos  = d.todos;
       if(d.prep) s.prep = d.prep;   // 兼容旧数据，不覆盖用户已有内容
+      if(d.purchases) s.purchases = d.purchases;  // 比价数据兼容（v2.3）
       return s;
     }
   }catch(e){}
@@ -439,6 +456,7 @@ function render(){
   else if(curTab==='budget') v.innerHTML=renderBudget();
   else if(curTab==='todo') v.innerHTML=renderTodo();
   else if(curTab==='prep') v.innerHTML=renderPrep();
+  else if(curTab==='price') v.innerHTML=renderPrice();
 }
 
 function renderOverview(){
@@ -704,6 +722,213 @@ function fallbackCopy(txt,ok){
   document.body.appendChild(ta); ta.select();
   try{ document.execCommand('copy'); ok(); }catch(e){ alert('复制失败，请长按文本手动选择复制'); }
   ta.remove();
+}
+
+/* ============ 采购比价（v2.3） ============ */
+let priceQ='';
+function priceStats(list){
+  let saving=0, comparing=0, orderedN=0, orderedSum=0;
+  (list||S.purchases).forEach(p=>{
+    const ps=p.quotes.map(q=>q.price);
+    if(ps.length>1) saving+=Math.max(...ps)-Math.min(...ps);
+    if(p.ordered){orderedN++;orderedSum+=p.ordered.price;}
+    else if(p.quotes.length) comparing++;
+  });
+  return {saving,comparing,orderedN,orderedSum};
+}
+function priceListHTML(){
+  const kw=(priceQ||'').trim().toLowerCase();
+  const list=S.purchases.filter(p=>!kw||p.name.toLowerCase().includes(kw)||(p.cat||'').toLowerCase().includes(kw));
+  if(!list.length) return `<div class="card" style="text-align:center;color:var(--ink-2);padding:26px 0">${kw?'没有匹配「'+esc(priceQ)+'」的采购项':'还没有采购项，点上方「＋ 添加采购项」开始比价'}</div>`;
+  return list.map(priceCard).join('');
+}
+function renderPrice(){
+  const st=priceStats();
+  return `
+  <div class="card">
+    <h3><span class="dot"></span>🛒 采购比价</h3>
+    <div style="display:flex;gap:8px;margin:10px 0 4px">
+      <div style="flex:1;background:var(--green-soft);border-radius:10px;padding:10px 6px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--green)">¥${Math.round(st.saving).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--ink-2);margin-top:2px">按最低价买可省</div>
+      </div>
+      <div style="flex:1;background:var(--blue-soft);border-radius:10px;padding:10px 6px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:var(--blue)">${st.comparing}</div>
+        <div style="font-size:11px;color:var(--ink-2);margin-top:2px">比价中</div>
+      </div>
+      <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px 6px;text-align:center">
+        <div style="font-size:18px;font-weight:800">${st.orderedN}</div>
+        <div style="font-size:11px;color:var(--ink-2);margin-top:2px">已下单 ¥${Math.round(st.orderedSum).toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px"><input id="price_q" placeholder="🔍 搜索商品名称 / 类目" value="${esc(priceQ)}" oninput="priceQ=this.value;document.getElementById('price_list').innerHTML=priceListHTML()"></div>
+    <button class="btn" onclick="editProduct()">＋ 添加采购项</button>
+  </div>
+  <div id="price_list">${priceListHTML()}</div>`;
+}
+function priceCard(p){
+  const ps=p.quotes.map(q=>q.price);
+  const min=ps.length?Math.min(...ps):null;
+  const max=ps.length?Math.max(...ps):null;
+  let chip,bg;
+  if(p.ordered){chip='已下单';bg='var(--green-soft)';}
+  else if(ps.length){chip='比价中';bg='var(--blue-soft)';}
+  else {chip='待报价';bg='var(--bg)';}
+  const rows=[...p.quotes].sort((a,b)=>a.price-b.price).map(q=>{
+    const isMin=!p.ordered&&q.price===min;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px dashed var(--line)">
+      <div style="flex:1;font-size:13px">${esc(q.channel)}${isMin?' <span style="color:var(--green);font-weight:700;font-size:11px">最低</span>':''}${q.note?`<div style="font-size:11px;color:var(--ink-2)">${esc(q.note)}</div>`:''}</div>
+      <div style="font-weight:700;font-size:14px;color:${isMin?'var(--green)':'var(--ink)'}">¥${Math.round(q.price).toLocaleString()}</div>
+      <div style="color:var(--ink-2);cursor:pointer;padding:2px 6px" onclick="delQuote('${p.id}','${q.id}')">✕</div>
+    </div>`;}).join('');
+  let diff='';
+  if(ps.length>1) diff=`<div style="font-size:12px;margin-top:6px;color:var(--ink-2)">高低价差 <b style="color:var(--amber)">¥${Math.round(max-min).toLocaleString()}</b>，选最低价 vs 最高价省 <b style="color:var(--green)">¥${Math.round(max-min).toLocaleString()}</b></div>`;
+  let budgetTip='';
+  if(min!=null&&p.budget>0){
+    budgetTip = min<=p.budget
+      ? `<div style="font-size:12px;color:var(--green);margin-top:3px">✓ 最低价低于预算 ¥${Math.round(p.budget-min).toLocaleString()}</div>`
+      : `<div style="font-size:12px;color:var(--red);margin-top:3px">⚠ 最低价超预算 ¥${Math.round(min-p.budget).toLocaleString()}</div>`;
+  }
+  let orderBox='';
+  if(p.ordered){
+    orderBox=`<div style="margin-top:8px;background:var(--green-soft);border-radius:10px;padding:8px 10px;font-size:13px">
+      🛒 已下单：<b>${esc(p.ordered.channel)}</b> <b style="color:var(--green)">¥${Math.round(p.ordered.price).toLocaleString()}</b>
+      <span style="color:var(--ink-2);font-size:11px"> · ${esc(p.ordered.date||'')}</span>
+      ${p.ordered.rec?'<div style="font-size:11px;color:var(--ink-2);margin-top:2px">已记入预算支出</div>':`<button class="btn ghost" style="margin-top:6px;padding:5px 12px;font-size:12px" onclick="orderToBudget('${p.id}')">记入预算支出</button>`}
+    </div>`;
+  }
+  return `
+  <div class="card">
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="flex:1">
+        <span style="font-size:11px;background:${bg};color:var(--ink-2);border-radius:6px;padding:2px 8px;margin-right:6px">${chip}</span>
+        <span style="font-size:11px;color:var(--ink-2);background:var(--bg);border-radius:6px;padding:2px 8px">${esc(p.cat||'未分类')}</span>
+        <div style="font-weight:700;font-size:15px;margin-top:6px">${esc(p.name)}</div>
+        ${p.budget>0?`<div style="font-size:12px;color:var(--ink-2);margin-top:2px">预算 ${fmt(p.budget)}${min!=null?' · 最低 '+fmt(min):''}</div>`:(min!=null?`<div style="font-size:12px;color:var(--ink-2);margin-top:2px">最低 ${fmt(min)}</div>`:'')}
+      </div>
+      <div style="color:var(--ink-2);cursor:pointer;padding:2px 4px" onclick="delProduct('${p.id}')">🗑</div>
+    </div>
+    ${rows||'<div style="font-size:12px;color:var(--ink-2);padding:8px 0">还没有报价，点下方「＋ 报价」录入第一个渠道</div>'}
+    ${diff}${budgetTip}${orderBox}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" style="flex:1;padding:8px 0;font-size:13px" onclick="addQuote('${p.id}')">＋ 报价</button>
+      <button class="btn ghost" style="flex:1;padding:8px 0;font-size:13px" onclick="editProduct('${p.id}')">✎ 编辑</button>
+      ${p.ordered
+        ?`<button class="btn ghost" style="flex:1;padding:8px 0;font-size:13px" onclick="cancelOrder('${p.id}')">取消下单</button>`
+        :(p.quotes.length?`<button class="btn ghost" style="flex:1;padding:8px 0;font-size:13px" onclick="markOrder('${p.id}')">🛒 下单</button>`:'')}
+    </div>
+  </div>`;
+}
+function editProduct(id){
+  const p=id?S.purchases.find(x=>x.id===id):null;
+  openSheet(`
+    <h4>${p?'✎ 编辑采购项':'＋ 添加采购项'}</h4>
+    <div class="field"><label>商品名称</label><input id="pc_name" placeholder="如 客厅地砖 800×800" value="${p?esc(p.name):''}"></div>
+    <div class="field"><label>类目</label><input id="pc_cat" list="pc_cats" placeholder="硬装主材 / 电器 / 设备 / 家具 / 软装" value="${p?esc(p.cat||''):''}">
+      <datalist id="pc_cats"><option>硬装主材</option><option>电器</option><option>设备</option><option>家具</option><option>软装</option><option>五金电料</option></datalist></div>
+    <div class="field"><label>预算金额（元，选填）</label><input id="pc_budget" type="number" inputmode="decimal" placeholder="如 8000" value="${p&&p.budget?p.budget:''}"></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      <button class="btn" onclick="submitProduct('${id||''}')">保存</button>
+    </div>`);
+}
+function submitProduct(id){
+  const name=document.getElementById('pc_name').value.trim();
+  const cat=document.getElementById('pc_cat').value.trim();
+  const budget=parseFloat(document.getElementById('pc_budget').value)||0;
+  if(!name){ alert('请填写商品名称'); return; }
+  if(id){ const p=S.purchases.find(x=>x.id===id); p.name=name; p.cat=cat; p.budget=budget; }
+  else S.purchases.push({id:uid(),name,cat,budget,ordered:null,quotes:[]});
+  save(); closeSheet(); render();
+}
+function addQuote(pid){
+  openSheet(`
+    <h4>＋ 添加渠道报价</h4>
+    <div class="field"><label>渠道（店铺 / 平台）</label><input id="qt_ch" placeholder="如 京东 / 建材市场 A 店 / 小区团购"></div>
+    <div class="field"><label>报价（元，填总价）</label><input id="qt_pr" type="number" inputmode="decimal" placeholder="如 7080"></div>
+    <div class="field"><label>备注（选填）</label><input id="qt_note" placeholder="如 含送货 / 价保30天"></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      <button class="btn" onclick="submitQuote('${pid}')">保存</button>
+    </div>`);
+}
+function submitQuote(pid){
+  const ch=document.getElementById('qt_ch').value.trim();
+  const pr=parseFloat(document.getElementById('qt_pr').value);
+  const note=document.getElementById('qt_note').value.trim();
+  if(!ch){ alert('请填写渠道名称'); return; }
+  if(!pr||pr<=0){ alert('请输入有效报价'); return; }
+  S.purchases.find(x=>x.id===pid).quotes.push({id:uid(),channel:ch,price:pr,note});
+  save(); closeSheet(); render();
+}
+function delQuote(pid,qid){
+  if(!confirm('删除这条报价？')) return;
+  const p=S.purchases.find(x=>x.id===pid);
+  p.quotes=p.quotes.filter(q=>q.id!==qid);
+  if(p.ordered&&p.ordered.qid===qid){ p.ordered=null; }
+  save(); render();
+}
+function delProduct(pid){
+  if(!confirm('删除该采购项及其全部报价？')) return;
+  S.purchases=S.purchases.filter(x=>x.id!==pid);
+  save(); render();
+}
+function markOrder(pid){
+  const p=S.purchases.find(x=>x.id===pid);
+  const opts=[...p.quotes].sort((a,b)=>a.price-b.price).map((q,i)=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px">
+      <input type="radio" name="od_q" value="${q.id}" ${i===0?'checked':''}>
+      <span style="flex:1">${esc(q.channel)}</span>
+      <b>¥${Math.round(q.price).toLocaleString()}</b>
+    </label>`).join('');
+  openSheet(`
+    <h4>🛒 标记下单 — ${esc(p.name)}</h4>
+    <div style="margin:8px 0">${opts}</div>
+    <div class="field"><label>同时记入预算支出（选填）</label>
+      <select id="od_cat"><option value="">不记入</option>${S.budget.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      <button class="btn" onclick="submitOrder('${pid}')">确认下单</button>
+    </div>`);
+}
+function submitOrder(pid){
+  const qid=document.querySelector('input[name="od_q"]:checked').value;
+  const p=S.purchases.find(x=>x.id===pid);
+  const q=p.quotes.find(x=>x.id===qid);
+  p.ordered={qid:q.id,price:q.price,channel:q.channel,date:today(),rec:false};
+  const catId=document.getElementById('od_cat').value;
+  if(catId){
+    const b=S.budget.find(x=>x.id===catId);
+    b.spent+=q.price;
+    b.expenses.push({id:uid(),amount:q.price,note:p.name+'（'+q.channel+'）',date:today()});
+    p.ordered.rec=true; p.ordered.recCat=catId;
+  }
+  save(); closeSheet(); render();
+}
+function orderToBudget(pid){
+  const p=S.purchases.find(x=>x.id===pid);
+  openSheet(`
+    <h4>把「${esc(p.name)}」下单金额记入预算</h4>
+    <div class="field"><label>计入哪个预算类别</label>
+      <select id="ob_cat">${S.budget.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+    <div class="row">
+      <button class="btn cancel" onclick="closeSheet()">取消</button>
+      <button class="btn" onclick="submitOrderToBudget('${pid}')">确认记入</button>
+    </div>`);
+}
+function submitOrderToBudget(pid){
+  const p=S.purchases.find(x=>x.id===pid);
+  const catId=document.getElementById('ob_cat').value;
+  const b=S.budget.find(x=>x.id===catId);
+  b.spent+=p.ordered.price;
+  b.expenses.push({id:uid(),amount:p.ordered.price,note:p.name+'（'+p.ordered.channel+'）',date:today()});
+  p.ordered.rec=true; p.ordered.recCat=catId;
+  save(); closeSheet(); render();
+}
+function cancelOrder(pid){
+  const p=S.purchases.find(x=>x.id===pid);
+  if(p.ordered&&p.ordered.rec&&!confirm('该笔已记入预算支出，取消下单不会自动删除预算里的那笔支出（可到「预算」页核对）。确定取消？')) return;
+  p.ordered=null; save(); render();
 }
 function togglePrep(type,id){
   const x = S.prep[type].find(y=>y.id===id); x.done=!x.done; save(); render();
