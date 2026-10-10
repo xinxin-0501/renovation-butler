@@ -359,14 +359,14 @@ function seed(){
       ]},
     ],
     budget:[
-      {id:'b1',name:'硬装',color:'#FF7A45',budget:80000,spent:0,expenses:[]},
-      {id:'b2',name:'主材',color:'#2DA3F8',budget:100000,spent:0,expenses:[]},
-      {id:'b3',name:'设备',color:'#34C759',budget:50000,spent:0,expenses:[]},
-      {id:'b4',name:'软装',color:'#A06BFF',budget:40000,spent:0,expenses:[]},
+      {id:'b1',name:'硬装',color:'#FF7A45',budget:0,spent:0,expenses:[]},
+      {id:'b2',name:'主材',color:'#2DA3F8',budget:0,spent:0,expenses:[]},
+      {id:'b3',name:'设备',color:'#34C759',budget:0,spent:0,expenses:[]},
+      {id:'b4',name:'软装',color:'#A06BFF',budget:0,spent:0,expenses:[]},
     ],
     todos:[
-      {id:'d1',text:'确定装修公司并签合同',priority:'high',deadline:'2026-10-20',done:false},
-      {id:'d2',text:'选购主卫瓷砖',priority:'mid',deadline:'2026-11-10',done:false},
+      {id:'d1',text:'确定装修公司并签合同',priority:'high',deadline:'',done:false},
+      {id:'d2',text:'选购主卫瓷砖',priority:'mid',deadline:'',done:false},
       {id:'d3',text:'预约水电验收',priority:'low',deadline:'',done:false},
     ],
     prep:{
@@ -392,18 +392,7 @@ function seed(){
         {id:'c11',text:'图纸 / 材料清单作为合同附件，签字盖章',done:false,tip:'附件与合同同等效力'},
       ],
     },
-    purchases:[
-      {id:'pc1',name:'客厅地砖 800×800（约120片）',cat:'硬装主材',budget:8000,ordered:null,quotes:[
-        {id:'q1',channel:'建材市场 A 店',price:7800,note:'含送货上楼'},
-        {id:'q2',channel:'电商旗舰店',price:7080,note:'满额包邮，7天价保'},
-        {id:'q3',channel:'小区团购',price:6600,note:'50片起送，需押金'},
-      ]},
-      {id:'pc2',name:'冰箱 BCD-450',cat:'电器',budget:4000,ordered:{qid:'q11',price:3650,channel:'京东',date:'2026-10-10',rec:false},quotes:[
-        {id:'q10',channel:'天猫',price:3799,note:'含以旧换新补贴'},
-        {id:'q11',channel:'京东',price:3650,note:'价保30天'},
-      ]},
-      {id:'pc3',name:'乳胶漆 18L 套装',cat:'硬装主材',budget:1500,ordered:null,quotes:[]},
-    ],
+    purchases:[],
   };
 }
 
