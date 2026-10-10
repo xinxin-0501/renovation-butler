@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v4.1</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v4.2</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达·看价自动弹记价 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -1413,12 +1413,12 @@ function priceCard(p){
         <span style="font-size:11px;color:var(--ink-2);background:var(--bg);border-radius:6px;padding:2px 8px">${esc(p.cat||'未分类')}</span>
         <div style="font-weight:700;font-size:15px;margin-top:6px">${esc(p.name)}</div>
         ${platChips(p.id)}
-        <div style="font-size:11px;color:var(--ink-2);margin-top:5px">💡 点平台直达搜索价 → 看准最低价回这里点「＋ 报价」填回</div>
+        <div style="font-size:11px;color:var(--amber);margin-top:5px;background:var(--bg);border-radius:8px;padding:6px 8px">💡 <b>价格不在本页显示</b>：电商平台禁止外部网页自动抓价。点上面平台按钮 → 跳到京东/淘宝看实时价 → 切回来自动弹记价窗，填一下就行</div>
         ${p.budget>0?`<div style="font-size:12px;color:var(--ink-2);margin-top:2px">预算 ${fmt(p.budget)}${min!=null?' · 最低 '+fmt(min):''}</div>`:(min!=null?`<div style="font-size:12px;color:var(--ink-2);margin-top:2px">最低 ${fmt(min)}</div>`:'')}
       </div>
       <div style="color:var(--ink-2);cursor:pointer;padding:2px 4px" onclick="delProduct('${p.id}')">🗑</div>
     </div>
-    ${rows||'<div style="font-size:12px;color:var(--ink-2);padding:8px 0">还没有报价，点下方「＋ 报价」录入第一个渠道</div>'}
+    ${rows||`<div style="font-size:12px;color:var(--ink-2);padding:8px 0">还没有报价。点上面平台看价，回来填一下；或直接记一笔：<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${['京东','淘宝','天猫','拼多多','苏宁','什么值得买'].map(n=>`<a href="javascript:void(0)" onclick="addQuote('${p.id}','${n}')" style="padding:5px 10px;border-radius:8px;background:var(--bg);font-size:12px;color:var(--ink);text-decoration:none">＋ ${n}</a>`).join('')}</div></div>`}
     ${diff}${budgetTip}${orderBox}
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn" style="flex:1;padding:8px 0;font-size:13px" onclick="addQuote('${p.id}')">＋ 报价</button>
@@ -1451,10 +1451,12 @@ function submitProduct(id){
   else S.purchases.push({id:uid(),name,cat,budget,ordered:null,quotes:[]});
   save(); closeSheet(); render();
 }
-function addQuote(pid){
+function addQuote(pid,ch){
+  const p0=S.purchases.find(x=>x.id===pid);
   openSheet(`
-    <h4>＋ 添加渠道报价</h4>
-    <div class="field"><label>渠道（店铺 / 平台）</label><input id="qt_ch" placeholder="如 京东 / 建材市场 A 店 / 小区团购"></div>
+    <h4>💰 ${ch?'记录在 '+esc(ch)+' 看到的最低价':'＋ 添加渠道报价'}</h4>
+    ${ch?`<p style="font-size:12px;color:var(--ink-2);margin:4px 0 10px">刚帮你打开了 <b>${esc(ch)}</b> 的「${esc(p0?p0.name:'')}」搜索结果页（切回去就能看到一堆价格）。把其中<b>最低的到手价</b>填到这里，比完价自动帮你标最低、算能省多少。</p>`:''}
+    <div class="field"><label>渠道（店铺 / 平台）</label><input id="qt_ch" value="${ch?esc(ch):''}" placeholder="如 京东 / 建材市场 A 店 / 小区团购"></div>
     <div class="field"><label>报价（元，填总价）</label><input id="qt_pr" type="number" inputmode="decimal" placeholder="如 7080"></div>
     <div class="field"><label>备注（选填）</label><input id="qt_note" placeholder="如 含送货 / 价保30天"></div>
     <div class="row">
@@ -1552,11 +1554,11 @@ function platLinks(name){
     ['什么值得买', 'https://search.smzdm.com/?c=home&s='+q, '#e6398c'],
   ];
 }
-// 采购卡内嵌平台直达按钮排（v3.1：不用点开弹窗，卡片上直接点平台看价）
+// 采购卡内嵌平台直达按钮排（v4.2：点平台看价，切回来自动弹记价窗，渠道已选好）
 function platChips(pid){
   const p=S.purchases.find(x=>x.id===pid);
   return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">`
-    + platLinks(p.name).map(([n,u,c])=>`<a href="${u}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;padding:6px 10px;border-radius:8px;text-decoration:none;color:#fff;font-size:12px;font-weight:600;background:${c}">🛒 ${n}</a>`).join('')
+    + platLinks(p.name).map(([n,u,c])=>`<a href="${u}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;padding:6px 10px;border-radius:8px;text-decoration:none;color:#fff;font-size:12px;font-weight:600;background:${c}" onclick="setTimeout(()=>addQuote('${pid}','${n}'),500)">🛒 ${n}</a>`).join('')
     + `<a href="javascript:void(0)" onclick="openAllCompare('${pid}')" style="display:inline-flex;align-items:center;padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--blue);font-size:12px;font-weight:600;background:var(--blue-soft)">⧉ 全部打开</a>`
     + `</div>`;
 }
