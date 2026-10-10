@@ -206,7 +206,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.3</b>（含前期准备 + 合同范本 + 采购比价）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.4</b>（含前期准备 + 合同范本 + 采购比价）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -923,28 +923,29 @@ function cancelOrder(pid){
 function openPriceCompare(pid){
   const p=S.purchases.find(x=>x.id===pid);
   const q=encodeURIComponent(p.name);
+  // 全部为各平台官方搜索结果页（手机端直达），点开即是实时价格列表
   const sites=[
-    ['京东',   'https://search.jd.com/Search?keyword='+q],
-    ['天猫',   'https://list.tmall.com/search_product.htm?q='+q],
-    ['淘宝',   'https://s.taobao.com/search?q='+q],
-    ['拼多多', 'https://mobile.yangkeduo.com/search_result.html?search_key='+q],
-    ['苏宁',   'https://search.suning.com/'+encodeURIComponent(p.name)+'/'],
-    ['什么值得买','https://search.smzdm.com/?c=home&s='+q],
+    ['京东',   'https://so.m.jd.com/ware/search.action?keyword='+q, '#e1251b'],
+    ['淘宝',   'https://s.taobao.com/search?q='+q, '#ff5000'],
+    ['天猫',   'https://list.tmall.com/search_product.htm?q='+q, '#c6004e'],
+    ['拼多多', 'https://mobile.yangkeduo.com/search_result.html?search_key='+q, '#e02e24'],
+    ['苏宁',   'https://search.suning.com/'+encodeURIComponent(p.name)+'/', '#f9a63a'],
+    ['什么值得买·多平台好价', 'https://search.smzdm.com/?c=home&s='+q, '#e6398c'],
   ];
-  const links=sites.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener" style="display:block;padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;text-decoration:none;color:var(--ink);font-size:14px">🔗 ${n} · 搜索「${esc(p.name)}」</a>`).join('');
+  const btns=sites.map(([n,u,c])=>`<a href="${u}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:12px;margin-bottom:9px;text-decoration:none;color:#fff;font-size:15px;font-weight:600;background:${c}" onclick="setTimeout(closeSheet,300)"><span>🛒 ${n}</span><span style="font-weight:400;font-size:12px;opacity:.9">看实时价 →</span></a>`).join('');
   openSheet(`
-    <h4>🔗 去各平台比价 — ${esc(p.name)}</h4>
-    <p style="font-size:12px;color:var(--ink-2);margin:4px 0 12px">点任意平台在新窗口打开搜索结果，看准实时价后，回到本页点「＋ 报价」把真实价格填回即可。</p>
-    ${links}
-    <button class="btn" style="width:100%;margin-top:4px" onclick="openAllCompare('${pid}')">一次性打开全部平台</button>
+    <h4>🔍 查看各平台实时价格 — ${esc(p.name)}</h4>
+    <p style="font-size:12px;color:var(--ink-2);margin:4px 0 12px">点任一平台，立刻打开该平台的<b>搜索结果价格列表</b>（新窗口）。看准最低价后回到本页点「＋ 报价」把真实价格填回，自动帮你标最低、算省多少。</p>
+    ${btns}
+    <button class="btn ghost" style="width:100%;margin-top:4px" onclick="openAllCompare('${pid}')">电脑端：一次性打开全部平台</button>
     <button class="btn cancel" style="width:100%;margin-top:8px" onclick="closeSheet()">关闭</button>`);
 }
 function openAllCompare(pid){
   const p=S.purchases.find(x=>x.id===pid);
   const q=encodeURIComponent(p.name);
-  ['https://search.jd.com/Search?keyword='+q,
-   'https://list.tmall.com/search_product.htm?q='+q,
+  ['https://so.m.jd.com/ware/search.action?keyword='+q,
    'https://s.taobao.com/search?q='+q,
+   'https://list.tmall.com/search_product.htm?q='+q,
    'https://mobile.yangkeduo.com/search_result.html?search_key='+q,
    'https://search.smzdm.com/?c=home&s='+q].forEach(u=>window.open(u,'_blank'));
   closeSheet();
