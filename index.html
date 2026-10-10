@@ -110,6 +110,24 @@
   .task.done .box svg{display:block;}
   .task.done .txt{color:var(--ink-2);text-decoration:line-through;}
   .task .txt{line-height:1.5;flex:1;min-width:0;}
+  /* 阶段耗时 / 找谁做（v3.0） */
+  .stage-meta{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--blue-soft);border-radius:12px;}
+  .meta-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;}
+  .meta-item .ic{flex:0 0 auto;font-size:15px;line-height:1.2;}
+  .meta-item b{color:var(--ink);flex:0 0 auto;min-width:64px;}
+  .meta-item span.v{color:var(--ink-2);flex:1;min-width:0;}
+  /* 顺序时间轴（v3.0） */
+  .tl-wrap{margin-bottom:14px;}
+  .tl-title{font-size:13px;font-weight:700;color:var(--ink-2);margin:0 0 8px 2px;display:flex;align-items:center;gap:6px;}
+  .tl-scroll{display:flex;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
+  .tl-node{flex:0 0 auto;min-width:78px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;text-align:center;}
+  .tl-node.cur{border-color:var(--primary);background:var(--primary-soft);}
+  .tl-node.done{opacity:.55;}
+  .tl-idx{width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;margin-bottom:4px;}
+  .tl-node.done .tl-idx{background:var(--green);}
+  .tl-name{font-size:13px;font-weight:700;line-height:1.2;}
+  .tl-dur{font-size:11px;color:var(--ink-2);margin-top:3px;line-height:1.3;}
+  .tl-arrow{flex:0 0 auto;align-self:center;color:var(--ink-2);font-size:14px;padding:0 2px;}
   /* 全屋设计 v2.8 */
   .up-box{display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed var(--line);border-radius:12px;padding:16px 10px;font-size:13px;color:var(--ink-2);cursor:pointer;background:#FAFBFC}
   .up-box:active{background:var(--primary-soft)}
@@ -247,7 +265,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.9</b>（流程9阶段细化 + 自购材料清单 + 合同范本 + 比价 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.0</b>（9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 比价 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -310,7 +328,7 @@ const STAGE_MATS = {
 function seed(){
   return {
     stages:[
-      {id:'s1',name:'验房',open:false,tasks:[
+      {id:'s1',name:'验房',open:false,dur:'1-2 天（收房当天验；问题整改复验另约）',who:'自己 + 专业验房师（可选）/ 物业陪同收房',tasks:[
         {id:'t1',text:'检查墙面、地面空鼓与裂缝',done:false},
         {id:'t2',text:'门窗密封与开合测试',done:false},
         {id:'t3',text:'卫生间闭水试验（24-48小时）',done:false},
@@ -328,7 +346,7 @@ function seed(){
         '闭水试验水位不低于 2cm，楼下顶面无渗漏才算合格。',
         '带卷尺、验电笔、水桶、手机支架，按清单逐项核验。',
       ]},
-      {id:'s2',name:'拆改',open:false,tasks:[
+      {id:'s2',name:'拆改',open:false,dur:'3-7 天（视拆改量，含清运）',who:'拆改工队 / 装修公司项目经理',tasks:[
         {id:'t1',text:'确认承重墙 / 剪力墙 / 配重墙不可拆',done:false},
         {id:'t2',text:'标记原有水电管线走向',done:false},
         {id:'t3',text:'确认拆改范围与报价明细',done:false},
@@ -345,7 +363,7 @@ function seed(){
         '拆改、清运、复原（如门洞修复）要写进合同，防止后期加价。',
         '阳台配重墙（压阳台的矮墙）拆除会破坏结构，绝对不能动。',
       ]},
-      {id:'s3',name:'水电',open:false,tasks:[
+      {id:'s3',name:'水电',open:false,dur:'7-15 天（含打压、绝缘验收）',who:'持证水电工（强电/弱电分开请）/ 装修公司',tasks:[
         {id:'t1',text:'水电走顶、强弱电分离（间距≥30cm）',done:false},
         {id:'t2',text:'插座点位规划（宁多勿少）',done:false},
         {id:'t3',text:'下水管道做隔音包管',done:false},
@@ -362,7 +380,7 @@ function seed(){
         '强弱电交叉处用锡箔纸包裹，减少信号干扰。',
         '验收时做 0.8MPa 打压，30 分钟掉压不超过 0.05 才算合格。',
       ]},
-      {id:'s4',name:'泥瓦',open:false,tasks:[
+      {id:'s4',name:'泥瓦',open:false,dur:'15-30 天（含防水闭水、贴砖、美缝）',who:'泥瓦工 / 瓷砖商家上门量房铺贴',tasks:[
         {id:'t1',text:'瓷砖充分泡水（瓷片类）',done:false},
         {id:'t2',text:'卫生间地面找坡朝向地漏',done:false},
         {id:'t3',text:'墙砖压地砖铺贴工艺',done:false},
@@ -380,7 +398,7 @@ function seed(){
         '墙压地工艺防水更好，先铺墙砖留最底一排，后铺地砖收口。',
         '美缝防霉耐脏，厨卫湿区强烈建议做，别省这点钱。',
       ]},
-      {id:'s5',name:'木工',open:false,tasks:[
+      {id:'s5',name:'木工',open:false,dur:'7-15 天（含定制柜复尺下单）',who:'木工 / 全屋定制商家（复尺 + 安装）',tasks:[
         {id:'t1',text:'吊顶龙骨间距符合规范',done:false},
         {id:'t2',text:'板材环保等级确认（E0/E1）',done:false},
         {id:'t3',text:'预留空调 / 新风 / 灯带位置',done:false},
@@ -396,7 +414,7 @@ function seed(){
         '木工阶段就要把中央空调、新风、磁吸轨道灯的开孔留好。',
         '定制柜复尺要在贴砖、吊顶完成后，避免缝隙过大。',
       ]},
-      {id:'s6',name:'油漆',open:false,tasks:[
+      {id:'s6',name:'油漆',open:false,dur:'10-20 天（含每遍腻子干透）',who:'油漆工 / 装修公司',tasks:[
         {id:'t1',text:'墙面基层挂网、找平',done:false},
         {id:'t2',text:'腻子干透再刷下一遍',done:false},
         {id:'t3',text:'一底两面标准工艺',done:false},
@@ -411,7 +429,7 @@ function seed(){
         '标准为一遍底漆 + 两遍面漆，别被省成一遍面漆。',
         '阴雨天湿度大不宜刷漆，容易发白、干得慢。',
       ]},
-      {id:'s7',name:'安装',open:false,tasks:[
+      {id:'s7',name:'安装',open:false,dur:'7-15 天（分多批进场）',who:'橱柜/卫浴/木门/灯具商家各自上门 + 安装工',tasks:[
         {id:'t1',text:'确定安装顺序（橱卫→灯具→五金）',done:false},
         {id:'t2',text:'已完工面做好成品保护',done:false},
         {id:'t3',text:'核对设备尺寸与预留孔位',done:false},
@@ -429,7 +447,7 @@ function seed(){
         '烟机、灶具、热水器尺寸务必与水电预留对齐再装。',
         '收货当面验货，划痕、破损当场拒收并拍照。',
       ]},
-      {id:'s8',name:'软装',open:false,tasks:[
+      {id:'s8',name:'软装',open:false,dur:'7-30 天（家具陆续进场）',who:'家具/窗帘商家配送安装 + 自己布置',tasks:[
         {id:'t1',text:'家具先量尺寸后购买',done:false},
         {id:'t2',text:'窗帘 / 地毯 / 配色统一风格',done:false},
         {id:'t3',text:'灯光层次设计（主 + 辅 + 点）',done:false},
@@ -445,7 +463,7 @@ function seed(){
         '3000K 暖光更温馨，书房用 4000K 中性光护眼。',
         '先买大件再补小件，避免一次性买满显得拥挤。',
       ]},
-      {id:'s9',name:'入住',open:false,tasks:[
+      {id:'s9',name:'入住',open:false,dur:'通风 3-6 个月 + 保洁 1-2 天',who:'自己 + 开荒保洁公司（可选）/ CMA 检测机构',tasks:[
         {id:'t1',text:'通风 3-6 个月',done:false},
         {id:'t2',text:'甲醛检测达标（≤0.08mg/m³）',done:false},
         {id:'t3',text:'开荒保洁',done:false},
@@ -534,7 +552,9 @@ function load(){
         const have = new Set((us.tasks||[]).map(t=>t.text));
         const merged = (us.tasks||[]).map(t=>({...t}));
         if(ns) ns.tasks.forEach(t=>{ if(!have.has(t.text)) merged.push({id:uid(),text:t.text,done:false}); });
-        return {...us, tasks: merged};
+        return {...us, tasks: merged,
+          dur: (us.dur!==undefined?us.dur:(ns?ns.dur:'')),
+          who: (us.who!==undefined?us.who:(ns?ns.who:'')) };
       });
       s.budget = d.budget;
       s.todos  = d.todos;
@@ -698,10 +718,32 @@ function renderProcess(){
   </div>`
   + prepSec('办证 / 物业手续清单','docs','📋')
   + prepSec('装修合同避坑条款核对','contract','📝');
-  return prepBlock + S.stages.map((s,i)=>{
+  // 顺序时间轴（v3.0）：展示 9 阶段的先后与耗时
+  const curIdx = S.stages.findIndex(s=>!s.tasks.every(t=>t.done));
+  const tlNode = (s,i)=>{
+    const allDone = s.tasks.every(t=>t.done);
+    const cls = allDone?'done':(i===curIdx?'cur':'');
+    return `<div class="tl-node ${cls}">
+      <div class="tl-idx">${i+1}</div>
+      <div class="tl-name">${esc(s.name)}</div>
+      <div class="tl-dur">${esc(s.dur||'')}</div>
+    </div>`;
+  };
+  const tl = `<div class="tl-wrap">
+      <div class="tl-title">🗓️ 装修顺序时间轴（9 阶段依次进行，耗时仅供参考）</div>
+      <div class="tl-scroll">
+        ${S.stages.map((s,i)=> (i>0?'<div class="tl-arrow">→</div>':'')+tlNode(s,i)).join('')}
+      </div>
+    </div>`;
+  return tl + prepBlock + S.stages.map((s,i)=>{
     const done=s.tasks.filter(t=>t.done).length;
     const allDone = done===s.tasks.length;
     const open = s.open?'open':'';
+    const metaHtml = `
+      <div class="stage-meta">
+        <div class="meta-item"><span class="ic">⏱️</span><b>耗时参考</b><span class="v">${esc(s.dur||'--')}</span></div>
+        <div class="meta-item"><span class="ic">🤝</span><b>找谁做</b><span class="v">${esc(s.who||'--')}</span></div>
+      </div>`;
     const tasksHtml = s.tasks.map(t=>`
       <div class="task ${t.done?'done':''}" onclick="toggleTask('${s.id}','${t.id}')">
         <div class="box">${t.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
@@ -730,6 +772,7 @@ function renderProcess(){
         <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </div>
       <div class="stage-body">
+        ${metaHtml}
         ${tasksHtml}
         ${matsHtml}
         <div class="guide">
