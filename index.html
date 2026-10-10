@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.6</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.7</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -595,7 +595,13 @@ function seed(){
 
 let S = load();
 let AI_CFG = loadAICfg();
-function loadAICfg(){ try{ return JSON.parse(localStorage.getItem('renovation_ai_cfg'))||{autoAnalyze:true,json:true}; }catch(e){ return {autoAnalyze:true,json:true}; } }
+function loadAICfg(){
+  let c={autoAnalyze:true,json:true};
+  try{ c=JSON.parse(localStorage.getItem('renovation_ai_cfg'))||c; }catch(e){}
+  // v3.7 修复：自动纠正历史版本误写的智谱地址 paipai → paas（404 NOT_FOUND 根因）
+  if(c.baseUrl && /paipai/.test(c.baseUrl)){ c.baseUrl=c.baseUrl.replace('paipai','paas'); try{ localStorage.setItem('renovation_ai_cfg',JSON.stringify(c)); }catch(e){} }
+  return c;
+}
 function saveAICfg(){ try{ localStorage.setItem('renovation_ai_cfg', JSON.stringify(AI_CFG)); }catch(e){} }
 function load(){
   const s = seed();
@@ -918,11 +924,11 @@ function openAISettings(){
       <button class="btn" style="flex:1" onclick="saveAISettings()">保存</button>
       <button class="btn ghost" style="flex:1" onclick="closeSheet()">取消</button>
     </div>`);
-  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-flash'},custom:{base:'',model:''}};
+  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paas/v4',model:'glm-4v-flash'},custom:{base:'',model:''}};
   if(p&&presets[p]){ const b=document.getElementById('ai_base'),m=document.getElementById('ai_model'); if(b)b.value=presets[p].base; if(m)m.value=presets[p].model; }
 }
 function aiPreset(v){
-  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-flash'},custom:{base:'',model:''}};
+  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paas/v4',model:'glm-4v-flash'},custom:{base:'',model:''}};
   const pp=presets[v]||{base:'',model:''};
   const b=document.getElementById('ai_base'),m=document.getElementById('ai_model');
   if(b)b.value=pp.base; if(m)m.value=pp.model;
@@ -964,18 +970,24 @@ function applyAIFindings(arr){
   });
   return n;
 }
+// 常见报错的中文提示，方便一眼定位
+function aiErrHint(status){
+  if(status===404) return '｜提示：多为「接口地址 Base URL」写错，智谱应为 https://open.bigmodel.cn/api/paas/v4';
+  if(status===401||status===403) return '｜提示：API Key 无效或未授权，请到服务商控制台重新生成';
+  if(status===429) return '｜提示：免费额度限流，稍等几秒重试即可';
+  return '';
+}
 async function callVision(dataUrl){
   if(AI_CFG.provider==='gemini') return callVisionGemini(dataUrl);
   const cfg=AI_CFG;
-  const base=(cfg.baseUrl||'').replace(/\/$/,'');
-  const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON，不要多余文字。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
+  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON，不要多余文字。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
   const body={ model:cfg.model, temperature:0.3, messages:[
     {role:'system',content:sys},
     {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'}, {type:'image_url',image_url:{url:dataUrl}} ]}
   ]};
   if(cfg.json!==false) body.response_format={type:'json_object'};
   const resp=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
-  if(!resp.ok){ let t=''; try{ t=await resp.text(); }catch(e){} return {error:'HTTP '+resp.status+' '+(t.slice(0,140))}; }
+  if(!resp.ok){ let t=''; try{ t=await resp.text(); }catch(e){} return {error:'HTTP '+resp.status+' '+(t.slice(0,140))+aiErrHint(resp.status)}; }
   const j=await resp.json();
   const content=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
   return parseVision(content);
@@ -995,7 +1007,7 @@ async function callVisionGemini(dataUrl){
   };
   const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(cfg.key);
   const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if(!resp.ok){ let t=''; try{ t=await resp.text(); }catch(e){} return {error:'HTTP '+resp.status+' '+(t.slice(0,160))}; }
+  if(!resp.ok){ let t=''; try{ t=await resp.text(); }catch(e){} return {error:'HTTP '+resp.status+' '+(t.slice(0,160))+aiErrHint(resp.status)}; }
   const j=await resp.json();
   const txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text)||'';
   return parseVision(txt);
