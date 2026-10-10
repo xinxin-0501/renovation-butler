@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.2</b>（装修巡检·照片自查整改清单 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.3</b>（语音播报整改清单 + 装修巡检·照片自查 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -721,6 +721,8 @@ function renderOverview(){
 
   ${renderInspectCard()}
 
+  ${renderVoiceCard()}
+
   <div class="card">
     <h3><span class="dot"></span>预算速览</h3>
     <div class="budget-total">
@@ -764,7 +766,11 @@ function renderInspectCard(){
       <div style="flex:1;background:var(--bg);border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:800">${done.length}</div><div style="font-size:11px;color:var(--ink-2)">已整改</div></div>
     </div>`:'';
   const listBlock = onItems.length?`<div style="margin-top:12px"><div class="gt" style="margin-bottom:8px">⚠️ 需要改正 / 修补的地方</div>${listHtml}
-      <button class="btn ghost" style="width:100%;margin-top:6px" onclick="copyInspect()">📋 复制整改清单</button>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn" style="flex:1;padding:8px 0;font-size:13px" onclick="speakInspect()">🔊 语音播报</button>
+        <button class="btn ghost" style="flex:1;padding:8px 0;font-size:13px" onclick="copyInspect()">📋 复制清单</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔊 点「语音播报」用中文朗读：每条问题 + 部位 + 如何改正（再次点击可停止）。需手机系统浏览器（Safari/Chrome）支持，微信内置浏览器可能无语音。</div>
     </div>`:'';
   return `
   <div class="card">
@@ -779,6 +785,17 @@ function renderInspectCard(){
     ${ph?`<div class="prep-photos" style="margin-top:10px">${ph}</div>`:''}
     <button class="btn" style="width:100%;margin-top:10px" onclick="openInspectChecklist()">🔍 对照清单自查（已勾 ${onItems.length} 项）</button>
     ${statsHtml}${listBlock}
+  </div>`;
+}
+function renderVoiceCard(){
+  const open=inspFlat().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
+  const n=open.length;
+  return `
+  <div class="card" style="background:linear-gradient(135deg,#FFF1EA,#FFE3D6)">
+    <h3><span class="dot"></span>🎙️ 语音播报 · 听整改清单</h3>
+    <div style="font-size:13px;color:var(--ink-2);line-height:1.6">把现场照片 / 视频对照清单勾出问题后，点下面按钮，系统用中文<b>念出每条不对的地方 + 如何改正</b>。边看工地边听，不用一直盯屏幕。</div>
+    <button class="btn" style="width:100%;margin-top:12px;padding:13px 0;font-size:15px" onclick="speakInspect()">🔊 ${n?('播放 '+n+' 条整改建议'):'语音播报整改清单'}</button>
+    <div style="font-size:11px;color:var(--ink-2);margin-top:8px">${n?('当前有 '+n+' 条待整改可播报 · 再次点击停止'):'暂无待播报项，先到上方「对照清单自查」勾选问题'} · 需手机系统浏览器（Safari/Chrome）支持语音</div>
   </div>`;
 }
 function uploadInspectPhoto(){
@@ -846,6 +863,21 @@ function copyInspect(){
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(()=>alert('已复制整改清单到剪贴板')).catch(()=>prompt('复制下面的整改清单：',txt));
   } else { prompt('复制下面的整改清单：',txt); }
+}
+/* 语音播报整改清单（v3.3）：用中文朗读每条「问题 + 部位 + 如何改正」，再次点击停止 */
+function speakInspect(){
+  if(!('speechSynthesis' in window)){ alert('当前浏览器不支持语音播报，请用手机系统浏览器（Safari / Chrome）打开本页面。'); return; }
+  if(window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); return; }
+  const open=inspFlat().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
+  if(!open.length){ alert('还没有待播报的整改项，先点「🔍 对照清单自查」勾选你照片里发现的问题。'); return; }
+  window.speechSynthesis.cancel();
+  const sevMap={high:'必须改',mid:'建议改',low:'可暂缓'};
+  let txt='装修整改清单，共'+open.length+'项。';
+  open.forEach((it,i)=>{ const o=S.inspect.issues[it.id]; txt+='第'+(i+1)+'项，'+(sevMap[o.sev]||'')+'，'+it.text+'，位于'+it.cat+'。改正方法：'+it.fix+'。'; });
+  const u=new SpeechSynthesisUtterance(txt);
+  u.lang='zh-CN'; u.rate=1; u.pitch=1;
+  try{ const vs=window.speechSynthesis.getVoices()||[]; const zh=vs.find(v=>/zh|Chinese|普通话|国语/i.test((v.lang||'')+(v.name||''))); if(zh) u.voice=zh; }catch(e){}
+  window.speechSynthesis.speak(u);
 }
 
 function renderProcess(){
