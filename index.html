@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.9</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v4.0</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -1001,7 +1001,7 @@ function aiErrHint(status){
 async function callVision(dataUrl){
   if(AI_CFG.provider==='gemini') return callVisionGemini(dataUrl);
   const cfg=AI_CFG;
-  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律：①未完工/尚未施工的部位不算缺陷，只报真实质量问题或隐患；②瓷砖砖缝（均匀的深色勾缝线）不是裂缝，严禁把砖缝当裂缝报；③区分部位：墙面还是地面，严禁搞错。重点检查：排水/排污管管口是否敞开未封堵（水泥渣掉入会堵管，属高危）、冷热水出水口是否加堵头保护、线盒内线头是否裸露乱放、瓷砖切割口是否粗糙未收口、瓷砖表面水泥浆是否未清理、砖面空鼓破损、成品是否被压划伤。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位，如：墙面中部白色PVC排水管","issue":"现象，如：管口敞开未封堵，管内可见水泥残渣","sev":"high|mid|low","fix":"怎么改，如：立即用专用管帽或塑料布+胶带封口，防止水泥浆掉入堵塞下水"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造。';
+  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律（必须遵守）：①宁缺毋滥：只报你有把握、照片中确实可见的问题，没把握宁可不报，发现几处报几处，可以是1处甚至0处，严禁为凑数而报；②未完工/尚未施工不算缺陷；③瓷砖砖缝（均匀深色勾缝线）不是裂缝；④分清墙面与地面，严禁搞错；⑤轻微浮尘、正常施工痕迹不算缺陷。重点检查：瓷砖缝里是否嵌着未取出的塑料十字卡/找平器楔子（美缝前必须取出，否则美缝剂粘不牢）、美缝是否饱满有无针眼凹陷、排水管管口是否敞开未封堵、出水口是否加堵头、线盒线头是否裸露乱放、瓷砖切割口是否粗糙未收口、砖面是否有明显水泥浆结块（轻微浮尘不算）、空鼓破损、成品被压划伤。每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。只有确实看不出问题时才返回 {"issues":[]}，严禁编造。';
   const body={ model:cfg.model, temperature:0.3, messages:[
     {role:'system',content:sys},
     {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'}, {type:'image_url',image_url:{url:dataUrl}} ]}
@@ -1017,7 +1017,7 @@ async function callVision(dataUrl){
 async function callVisionGemini(dataUrl){
   const cfg=AI_CFG;
   const model=cfg.model||'gemini-2.0-flash';
-  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律：①未完工/尚未施工的部位不算缺陷，只报真实质量问题或隐患；②瓷砖砖缝不是裂缝，严禁把砖缝当裂缝报；③区分部位：墙面还是地面，严禁搞错。重点检查：排水/排污管管口是否敞开未封堵、冷热水出水口是否加堵头保护、线盒内线头是否裸露乱放、瓷砖切割口是否粗糙未收口、瓷砖表面水泥浆是否未清理、砖面空鼓破损、成品是否被压划伤。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造。';
+  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律（必须遵守）：①宁缺毋滥：只报有把握、确实可见的问题，发现几处报几处，可以是1处甚至0处，严禁凑数；②未完工不算缺陷；③砖缝不是裂缝；④分清墙面与地面；⑤轻微浮尘不算缺陷。重点检查：瓷砖缝里未取出的塑料十字卡/找平器楔子、美缝是否饱满、管口是否未封堵、出水口是否未加堵头、线盒线头裸露、切割口粗糙、明显水泥浆结块、空鼓破损、成品划伤。每条写清具体位置和现象，改法小白能照做。输出 JSON：{"issues":[{"cat":"部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。确实看不出问题才返回 {"issues":[]}，严禁编造。';
   const b64=(dataUrl.split(',')[1]||dataUrl);
   const body={
     contents:[{parts:[
@@ -1045,11 +1045,12 @@ function resizeImageForAPI(dataUrl){
   return new Promise((resolve,reject)=>{
     const img=new Image();
     img.onload=()=>{
-      let w=img.width,h=img.height; const max=1024;
+      // v4.0：送检分辨率 1024→1600、质量 0.82→0.88，保住十字卡/针眼等小细节（小缺陷漏报根因之一）
+      let w=img.width,h=img.height; const max=1600;
       if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
       const c=document.createElement('canvas'); c.width=w; c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(c.toDataURL('image/jpeg',0.82));
+      resolve(c.toDataURL('image/jpeg',0.88));
     };
     img.onerror=()=>reject(new Error('图片解码失败'));
     img.src=dataUrl;
