@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.4</b>（AI 视觉拍照找问题 + 语音播报整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.5</b>（免费 Gemini 视觉找问题 + 语音播报整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -800,7 +800,7 @@ function renderInspectCard(){
         <input type="checkbox" onchange="AI_CFG.autoAnalyze=this.checked;saveAICfg();render()" ${AI_CFG.autoAnalyze!==false?'checked':''}> 上传照片后自动用 AI 分析
       </label>
       ${aiOn&&ins.photos.some(p=>p.img)?`<button class="btn" style="width:100%;margin-top:8px;padding:7px 0;font-size:13px" onclick="analyzeAllInspect()">🤖 一键分析全部照片（${ins.photos.filter(p=>p.img).length} 张）</button>`:''}
-      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；照片会发给所选服务商分析（按张计费）。隐蔽工程以人工/监理为准。</div>
+      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；选 Gemini 走免费额度不收费，其他按各自计费。隐蔽工程以人工/监理为准。</div>
     </div>`;
   return `
   <div class="card">
@@ -927,6 +927,7 @@ function openAISettings(){
     <p style="font-size:12px;color:var(--ink-2);margin:4px 0 8px">配置后，拍照即可自动识别施工缺陷并生成整改清单。API Key 仅存你本机浏览器，不会上传到本工作台或 GitHub，也不会被他人看到。</p>
     <label style="font-size:13px">服务商
       <select id="ai_prov" onchange="aiPreset(this.value)" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:8px">
+        <option value="gemini" ${p==='gemini'?'selected':''}>Gemini（谷歌·免费额度，推荐）</option>
         <option value="openai" ${p==='openai'?'selected':''}>OpenAI（gpt-4o-mini 等）</option>
         <option value="qwen" ${p==='qwen'?'selected':''}>通义千问（qwen-vl-max）</option>
         <option value="zhipu" ${p==='zhipu'?'selected':''}>智谱 GLM-4V</option>
@@ -945,16 +946,16 @@ function openAISettings(){
     <label style="font-size:12px;display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink-2)">
       <input type="checkbox" id="ai_json" ${AI_CFG.json!==false?'checked':''}> 强制 JSON 输出（部分服务商不支持，调用报错可关闭）
     </label>
-    <p style="font-size:11px;color:var(--amber);margin:8px 0">⚠️ 隐私：照片会发送给所选服务商做分析；费用按张计费，请知悉。含门牌/人脸等敏感信息的图建议先打码。</p>
+    <p style="font-size:11px;color:var(--amber);margin:8px 0">⚠️ 选 <b>Gemini</b> 走谷歌免费额度（不收费，有速率限制，偶尔需稍等重试）；其他服务商按各自计费。照片会发送给所选服务商分析，含门牌/人脸等敏感信息的图建议先打码。</p>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn" style="flex:1" onclick="saveAISettings()">保存</button>
       <button class="btn ghost" style="flex:1" onclick="closeSheet()">取消</button>
     </div>`);
-  const presets={openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
+  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
   if(p&&presets[p]){ const b=document.getElementById('ai_base'),m=document.getElementById('ai_model'); if(b)b.value=presets[p].base; if(m)m.value=presets[p].model; }
 }
 function aiPreset(v){
-  const presets={openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
+  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
   const pp=presets[v]||{base:'',model:''};
   const b=document.getElementById('ai_base'),m=document.getElementById('ai_model');
   if(b)b.value=pp.base; if(m)m.value=pp.model;
@@ -997,6 +998,7 @@ function applyAIFindings(arr){
   return n;
 }
 async function callVision(dataUrl){
+  if(AI_CFG.provider==='gemini') return callVisionGemini(dataUrl);
   const cfg=AI_CFG;
   const base=(cfg.baseUrl||'').replace(/\/$/,'');
   const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON，不要多余文字。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
@@ -1010,6 +1012,26 @@ async function callVision(dataUrl){
   const j=await resp.json();
   const content=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
   return parseVision(content);
+}
+// Gemini（谷歌免费额度）：接口格式与 OpenAI 不同，单独实现；在免费额度内不收费
+async function callVisionGemini(dataUrl){
+  const cfg=AI_CFG;
+  const model=cfg.model||'gemini-2.0-flash';
+  const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
+  const b64=(dataUrl.split(',')[1]||dataUrl);
+  const body={
+    contents:[{parts:[
+      {text: sys+' 请分析这张装修现场照片，列出没做好的地方及改正方法。'},
+      {inlineData:{mimeType:'image/jpeg', data:b64}}
+    ]}],
+    generationConfig:{temperature:0.3, responseMimeType:'application/json'}
+  };
+  const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(cfg.key);
+  const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!resp.ok){ let t=''; try{ t=await resp.text(); }catch(e){} return {error:'HTTP '+resp.status+' '+(t.slice(0,160))}; }
+  const j=await resp.json();
+  const txt=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text)||'';
+  return parseVision(txt);
 }
 function parseVision(content){
   try{ const o=JSON.parse(content); if(o&&Array.isArray(o.issues)) return {issues:o.issues}; if(Array.isArray(o)) return {issues:o}; }catch(e){}
