@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.3</b>（语音播报整改清单 + 装修巡检·照片自查 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.4</b>（AI 视觉拍照找问题 + 语音播报整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -364,6 +364,15 @@ const INSPECT_ITEMS = [
 ];
 function inspFlat(){ const a=[]; INSPECT_ITEMS.forEach(c=>c.items.forEach(it=>a.push({...it,cat:c.cat}))); return a; }
 function inspById(id){ return inspFlat().find(x=>x.id===id); }
+// 合并「静态清单项 + AI 发现项」，供汇总/语音/复制统一使用
+function inspAll(){
+  const base = inspFlat().map(it=>({id:it.id,text:it.text,cat:it.cat,fix:it.fix,ai:false}));
+  const ai = Object.keys(S.inspect.issues).filter(k=>S.inspect.issues[k]&&S.inspect.issues[k].ai).map(k=>{
+    const o=S.inspect.issues[k];
+    return {id:k,text:o.aiText||'(AI 发现)',cat:o.aiCat||'AI 发现',fix:o.aiFix||'',ai:true};
+  });
+  return base.concat(ai);
+}
 
 function seed(){
   return {
@@ -585,6 +594,9 @@ function seed(){
 }
 
 let S = load();
+let AI_CFG = loadAICfg();
+function loadAICfg(){ try{ return JSON.parse(localStorage.getItem('renovation_ai_cfg'))||{autoAnalyze:true,json:true}; }catch(e){ return {autoAnalyze:true,json:true}; } }
+function saveAICfg(){ try{ localStorage.setItem('renovation_ai_cfg', JSON.stringify(AI_CFG)); }catch(e){} }
 function load(){
   const s = seed();
   try{
@@ -737,29 +749,35 @@ function renderOverview(){
 /* ============ 装修巡检（v3.2）：上传现场照片 + 对照清单自查 → 自动汇总整改清单 ============ */
 function renderInspectCard(){
   const ins=S.inspect;
-  const all=inspFlat();
+  const all=inspAll();
   const onItems=all.filter(it=>ins.issues[it.id]&&ins.issues[it.id].on);
   const open=onItems.filter(it=>!ins.issues[it.id].fixed);
   const done=onItems.filter(it=>ins.issues[it.id].fixed);
   const sevCount=sev=>open.filter(it=>ins.issues[it.id].sev===sev).length;
-  const ph=ins.photos.map((p,i)=> p.img
-    ? `<div style="position:relative"><img src="${p.img}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)" onclick="zoomPhoto('${encodeURIComponent(p.img)}')"><div onclick="delInspectPhoto(${i})" style="position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">×</div></div>`
-    : `<div style="width:64px;height:64px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ink-2);text-align:center;padding:3px">${esc(p.caption||'视频')}</div>`
-  ).join('');
+  const aiOn = !!(AI_CFG && AI_CFG.key);
+  const aiStatus = aiOn? ('已配置 · '+(AI_CFG.provider||'')+' / '+(AI_CFG.model||'')) : '未配置（去设置）';
+  const ph=ins.photos.map((p,i)=>{
+    const thumb = p.img
+      ? `<img src="${p.img}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)" onclick="zoomPhoto('${encodeURIComponent(p.img)}')">`
+      : `<div style="width:64px;height:64px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ink-2);text-align:center;padding:3px">${esc(p.caption||'视频')}</div>`;
+    const aiBtn = (aiOn && p.img) ? `<div onclick="analyzeInspectPhoto(${i})" title="用 AI 分析这张" style="position:absolute;bottom:-7px;right:-7px;background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">🤖</div>` : '';
+    return `<div style="position:relative">${thumb}<div onclick="delInspectPhoto(${i})" style="position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">×</div>${aiBtn}</div>`;
+  }).join('');
   const listHtml = open.length? open.map(it=>{
     const o=ins.issues[it.id];
     const sevMap={high:['必须改','var(--red)','var(--red-soft)'],mid:['建议改','var(--amber)','#FFF4E0'],low:['可暂缓','var(--ink-2)','var(--bg)']};
     const [label,col,bg]=sevMap[o.sev]||sevMap.high;
+    const aiTag = it.ai?`<span style="font-size:10px;color:var(--primary);margin-left:6px">🤖</span>`:'';
     return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="background:${bg};color:${col};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">${label}</span>
-        <b style="font-size:14px">${esc(it.text)}</b>
+        <b style="font-size:14px">${esc(it.text)}</b>${aiTag}
       </div>
       <div style="font-size:12px;color:var(--ink-2);margin-top:5px">📍 ${esc(it.cat)} · 🔧 ${esc(it.fix)}</div>
       ${o.note?`<div style="font-size:12px;color:var(--ink);margin-top:4px">📝 ${esc(o.note)}</div>`:''}
       <button class="btn ghost" style="margin-top:7px;padding:4px 12px;font-size:12px" onclick="toggleInspectFixed('${it.id}')">✓ 标记已整改</button>
     </div>`;
-  }).join('') : (onItems.length? `<div style="font-size:13px;color:var(--green);padding:8px 0">🎉 勾选的问题都已整改完成！</div>` : `<div style="font-size:12px;color:var(--ink-2);padding:8px 0">勾选你照片里发现的问题后，这里会自动生成「需要改正修补的地方」清单。</div>`);
+  }).join('') : (onItems.length? `<div style="font-size:13px;color:var(--green);padding:8px 0">🎉 勾选的问题都已整改完成！</div>` : `<div style="font-size:12px;color:var(--ink-2);padding:8px 0">上传照片用 🤖 自动分析，或对照清单手动勾选，这里会自动生成「需要改正修补的地方」清单。</div>`);
   const statsHtml = onItems.length?`<div style="display:flex;gap:8px;margin-top:12px">
       <div style="flex:1;background:var(--red-soft);border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--red)">${open.length}</div><div style="font-size:11px;color:var(--ink-2)">待整改</div></div>
       <div style="flex:1;background:var(--blue-soft);border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--blue)">${sevCount('high')}</div><div style="font-size:11px;color:var(--ink-2)">必须改</div></div>
@@ -772,23 +790,36 @@ function renderInspectCard(){
       </div>
       <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔊 点「语音播报」用中文朗读：每条问题 + 部位 + 如何改正（再次点击可停止）。需手机系统浏览器（Safari/Chrome）支持，微信内置浏览器可能无语音。</div>
     </div>`:'';
+  const aiRow = `
+    <div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--primary-soft)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:12px">🤖 <b>AI 视觉分析</b>：${aiStatus}</div>
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="openAISettings()">⚙️ 设置</button>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-2);margin-top:8px;cursor:pointer">
+        <input type="checkbox" onchange="AI_CFG.autoAnalyze=this.checked;saveAICfg();render()" ${AI_CFG.autoAnalyze!==false?'checked':''}> 上传照片后自动用 AI 分析
+      </label>
+      ${aiOn&&ins.photos.some(p=>p.img)?`<button class="btn" style="width:100%;margin-top:8px;padding:7px 0;font-size:13px" onclick="analyzeAllInspect()">🤖 一键分析全部照片（${ins.photos.filter(p=>p.img).length} 张）</button>`:''}
+      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；照片会发给所选服务商分析（按张计费）。隐蔽工程以人工/监理为准。</div>
+    </div>`;
   return `
   <div class="card">
-    <h3><span class="dot"></span>📸 装修巡检 · 找问题 / 查漏</h3>
-    <div style="font-size:12px;color:var(--ink-2);line-height:1.5">上传现场照片，对照清单逐项排查，自动汇总需要改正、修补的地方。</div>
+    <h3><span class="dot"></span>📸 装修巡检 · AI 拍照找问题</h3>
+    <div style="font-size:12px;color:var(--ink-2);line-height:1.5">上传现场照片（或视频抽帧），自动识别没做好的地方，生成整改清单，可语音播报。</div>
     <label class="up-box" style="margin-top:10px">
       <div style="font-size:24px">＋</div>
       <div>上传现场照片 / 视频</div>
       <input id="ins_file" type="file" accept="image/*,video/*" multiple hidden onchange="uploadInspectPhoto()">
     </label>
-    <div class="up-hint">📹 视频无法自动解析画面，请先截图关键帧上传；照片自动压缩存本机</div>
+    <div class="up-hint">📹 视频会自动抽关键帧一并分析；照片自动压缩存本机</div>
     ${ph?`<div class="prep-photos" style="margin-top:10px">${ph}</div>`:''}
-    <button class="btn" style="width:100%;margin-top:10px" onclick="openInspectChecklist()">🔍 对照清单自查（已勾 ${onItems.length} 项）</button>
+    ${aiRow}
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openInspectChecklist()">🔍 对照清单手动自查（已勾 ${onItems.length} 项）</button>
     ${statsHtml}${listBlock}
   </div>`;
 }
 function renderVoiceCard(){
-  const open=inspFlat().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
+  const open=inspAll().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
   const n=open.length;
   return `
   <div class="card" style="background:linear-gradient(135deg,#FFF1EA,#FFE3D6)">
@@ -802,14 +833,22 @@ function uploadInspectPhoto(){
   const files=document.getElementById('ins_file').files;
   if(!files||!files.length) return;
   let pending=files.length;
+  const done=()=>{ if(--pending<=0){ save(); render(); } };
   for(const f of files){
     if(f.type && f.type.startsWith('video/')){
-      S.inspect.photos.push({id:uid(),img:'',caption:'📹 '+(f.name||'视频')});
-      if(--pending===0){ save(); render(); }
+      videoFrame(f).then(frame=>{
+        const idx=S.inspect.photos.length;
+        if(frame){ S.inspect.photos.push({id:uid(),img:frame,caption:'📹 已抽帧'}); }
+        else { S.inspect.photos.push({id:uid(),img:'',caption:'📹 '+(f.name||'视频')}); }
+        done();
+        if(frame && AI_CFG.autoAnalyze!==false) analyzeInspectPhoto(idx);
+      });
     } else {
       resizeImage(f, 900, 0.7, url=>{
+        const idx=S.inspect.photos.length;
         S.inspect.photos.push({id:uid(),img:url,caption:''});
-        if(--pending===0){ save(); render(); }
+        done();
+        if(AI_CFG.autoAnalyze!==false) analyzeInspectPhoto(idx);
       });
     }
   }
@@ -855,7 +894,7 @@ function toggleInspectFixed(id){
   o.fixed=!o.fixed; save(); render();
 }
 function copyInspect(){
-  const open=inspFlat().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
+  const open=inspAll().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
   if(!open.length){ alert('暂无可复制的待整改项'); return; }
   const sevMap={high:'【必须改】',mid:'【建议改】',low:'【可暂缓】'};
   let txt='装修整改清单（'+today()+'）\n';
@@ -868,8 +907,8 @@ function copyInspect(){
 function speakInspect(){
   if(!('speechSynthesis' in window)){ alert('当前浏览器不支持语音播报，请用手机系统浏览器（Safari / Chrome）打开本页面。'); return; }
   if(window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); return; }
-  const open=inspFlat().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
-  if(!open.length){ alert('还没有待播报的整改项，先点「🔍 对照清单自查」勾选你照片里发现的问题。'); return; }
+  const open=inspAll().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
+  if(!open.length){ alert('还没有待播报的整改项，先上传照片用 🤖 分析，或点「🔍 对照清单自查」勾选你照片里发现的问题。'); return; }
   window.speechSynthesis.cancel();
   const sevMap={high:'必须改',mid:'建议改',low:'可暂缓'};
   let txt='装修整改清单，共'+open.length+'项。';
@@ -879,6 +918,132 @@ function speakInspect(){
   try{ const vs=window.speechSynthesis.getVoices()||[]; const zh=vs.find(v=>/zh|Chinese|普通话|国语/i.test((v.lang||'')+(v.name||''))); if(zh) u.voice=zh; }catch(e){}
   window.speechSynthesis.speak(u);
 }
+
+/* ============ AI 视觉分析（v3.4）：拍照/视频抽帧 → 调视觉大模型 → 结构化整改清单 ============ */
+function openAISettings(){
+  const p=AI_CFG.provider||'';
+  openSheet(`
+    <h4>🤖 AI 视觉分析设置</h4>
+    <p style="font-size:12px;color:var(--ink-2);margin:4px 0 8px">配置后，拍照即可自动识别施工缺陷并生成整改清单。API Key 仅存你本机浏览器，不会上传到本工作台或 GitHub，也不会被他人看到。</p>
+    <label style="font-size:13px">服务商
+      <select id="ai_prov" onchange="aiPreset(this.value)" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:8px">
+        <option value="openai" ${p==='openai'?'selected':''}>OpenAI（gpt-4o-mini 等）</option>
+        <option value="qwen" ${p==='qwen'?'selected':''}>通义千问（qwen-vl-max）</option>
+        <option value="zhipu" ${p==='zhipu'?'selected':''}>智谱 GLM-4V</option>
+        <option value="custom" ${p==='custom'?'selected':''}>自定义（兼容 OpenAI 格式）</option>
+      </select>
+    </label>
+    <label style="font-size:13px;display:block;margin-top:10px">API Key
+      <input id="ai_key" type="password" value="${esc(AI_CFG.key||'')}" placeholder="粘贴你的 API Key" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+    </label>
+    <label style="font-size:13px;display:block;margin-top:10px">接口地址（Base URL）
+      <input id="ai_base" value="${esc(AI_CFG.baseUrl||'')}" placeholder="https://api.openai.com/v1" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+    </label>
+    <label style="font-size:13px;display:block;margin-top:10px">模型名
+      <input id="ai_model" value="${esc(AI_CFG.model||'')}" placeholder="gpt-4o-mini" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+    </label>
+    <label style="font-size:12px;display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink-2)">
+      <input type="checkbox" id="ai_json" ${AI_CFG.json!==false?'checked':''}> 强制 JSON 输出（部分服务商不支持，调用报错可关闭）
+    </label>
+    <p style="font-size:11px;color:var(--amber);margin:8px 0">⚠️ 隐私：照片会发送给所选服务商做分析；费用按张计费，请知悉。含门牌/人脸等敏感信息的图建议先打码。</p>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn" style="flex:1" onclick="saveAISettings()">保存</button>
+      <button class="btn ghost" style="flex:1" onclick="closeSheet()">取消</button>
+    </div>`);
+  const presets={openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
+  if(p&&presets[p]){ const b=document.getElementById('ai_base'),m=document.getElementById('ai_model'); if(b)b.value=presets[p].base; if(m)m.value=presets[p].model; }
+}
+function aiPreset(v){
+  const presets={openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
+  const pp=presets[v]||{base:'',model:''};
+  const b=document.getElementById('ai_base'),m=document.getElementById('ai_model');
+  if(b)b.value=pp.base; if(m)m.value=pp.model;
+}
+function saveAISettings(){
+  const prov=document.getElementById('ai_prov').value;
+  AI_CFG={ provider:prov, key:document.getElementById('ai_key').value.trim(), baseUrl:document.getElementById('ai_base').value.trim(), model:document.getElementById('ai_model').value.trim(), json:document.getElementById('ai_json').checked, autoAnalyze: AI_CFG.autoAnalyze!==false };
+  saveAICfg(); closeSheet(); render();
+  toast(AI_CFG.key? '🤖 AI 已配置，可上传照片分析':'已保存（未填 Key，暂不可用）');
+}
+async function analyzeInspectPhoto(i){
+  const p=S.inspect.photos[i];
+  if(!p||!p.img){ toast('这张没有可用画面（视频未抽帧）'); return; }
+  if(!AI_CFG||!AI_CFG.key){ openAISettings(); return; }
+  toast('🤖 正在分析第 '+(i+1)+' 张…', 1600);
+  try{
+    const url=await resizeImageForAPI(p.img);
+    const res=await callVision(url);
+    if(res.error){ toast('分析失败：'+res.error); return; }
+    const n=applyAIFindings(res.issues||[]);
+    p.aiNote='🤖 已分析'; save(); render();
+    toast('🤖 分析完成：发现 '+n+' 处需整改', 2800);
+  }catch(e){ toast('分析出错：'+(e&&e.message?e.message:e)); }
+}
+async function analyzeAllInspect(){
+  if(!AI_CFG||!AI_CFG.key){ openAISettings(); return; }
+  const idx=S.inspect.photos.map((p,i)=>i).filter(i=>S.inspect.photos[i].img);
+  if(!idx.length){ toast('没有可分析的照片'); return; }
+  for(const i of idx){ await analyzeInspectPhoto(i); }
+}
+function applyAIFindings(arr){
+  let n=0;
+  (arr||[]).forEach(f=>{
+    if(!f||!f.issue) return;
+    const id='ai_'+uid();
+    const sev=(f.sev==='high'||f.sev==='mid'||f.sev==='low')?f.sev:'mid';
+    S.inspect.issues[id]={on:true,sev,fixed:false,ai:true,aiText:String(f.issue),aiCat:String(f.cat||'AI 发现'),aiFix:String(f.fix||''),note:''};
+    n++;
+  });
+  return n;
+}
+async function callVision(dataUrl){
+  const cfg=AI_CFG;
+  const base=(cfg.baseUrl||'').replace(/\/$/,'');
+  const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON，不要多余文字。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
+  const body={ model:cfg.model, temperature:0.3, messages:[
+    {role:'system',content:sys},
+    {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'}, {type:'image_url',image_url:{url:dataUrl}} ]}
+  ]};
+  if(cfg.json!==false) body.response_format={type:'json_object'};
+  const resp=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify(body)});
+  if(!resp.ok){ let t=''; try{ t=await resp.text(); }catch(e){} return {error:'HTTP '+resp.status+' '+(t.slice(0,140))}; }
+  const j=await resp.json();
+  const content=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
+  return parseVision(content);
+}
+function parseVision(content){
+  try{ const o=JSON.parse(content); if(o&&Array.isArray(o.issues)) return {issues:o.issues}; if(Array.isArray(o)) return {issues:o}; }catch(e){}
+  const m=content.match(/\{[\s\S]*\}/);
+  if(m){ try{ const o=JSON.parse(m[0]); if(o&&Array.isArray(o.issues)) return {issues:o.issues}; }catch(e){} }
+  const am=content.match(/\[[\s\S]*\]/);
+  if(am){ try{ return {issues:JSON.parse(am[0])}; }catch(e){} }
+  return {issues:[]};
+}
+function resizeImageForAPI(dataUrl){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height; const max=1024;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg',0.82));
+    };
+    img.onerror=()=>reject(new Error('图片解码失败'));
+    img.src=dataUrl;
+  });
+}
+function videoFrame(file){
+  return new Promise((resolve)=>{
+    const v=document.createElement('video'); v.preload='metadata'; v.muted=true;
+    try{ v.src=URL.createObjectURL(file); }catch(e){ resolve(null); return; }
+    v.onloadeddata=()=>{ try{ v.currentTime=Math.min(1,(v.duration||2)/2); }catch(e){ resolve(null); } };
+    v.onseeked=()=>{ try{ const c=document.createElement('canvas'); c.width=v.videoWidth||640; c.height=v.videoHeight||480; c.getContext('2d').drawImage(v,0,0,c.width,c.height); resolve(c.toDataURL('image/jpeg',0.7)); }catch(e){ resolve(null);} };
+    v.onerror=()=>resolve(null);
+    setTimeout(()=>resolve(null), 8000);
+  });
+}
+function toast(msg,ms=2200){ let t=document.getElementById('toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(0,0,0,.82);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:9999;max-width:82%;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none'; document.body.appendChild(t);} t.textContent=msg; t.style.opacity='1'; clearTimeout(t._t); t._t=setTimeout(()=>{t.style.opacity='0';}, ms); }
 
 function renderProcess(){
   // 前期准备：并入流程最上方（合同范本 + 办证清单 + 合同核对）
