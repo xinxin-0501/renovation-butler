@@ -110,6 +110,34 @@
   .task.done .box svg{display:block;}
   .task.done .txt{color:var(--ink-2);text-decoration:line-through;}
   .task .txt{line-height:1.5;flex:1;min-width:0;}
+  /* 全屋设计 v2.8 */
+  .up-box{display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px dashed var(--line);border-radius:12px;padding:16px 10px;font-size:13px;color:var(--ink-2);cursor:pointer;background:#FAFBFC}
+  .up-box:active{background:var(--primary-soft)}
+  .up-hint{font-size:12px;color:var(--ink-2);margin:2px 0 10px}
+  .fd-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .fd-label{flex:1.1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#FAFBFC}
+  .fd-val{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;text-align:right}
+  .fd-x{flex:none;width:30px;height:30px;border:none;background:#FEECEC;color:#E5484D;border-radius:9px;font-size:16px;cursor:pointer;line-height:1}
+  .room-list{display:flex;flex-direction:column;gap:8px}
+  .room-card{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;background:#fff}
+  .room-card:active{background:var(--primary-soft)}
+  .room-info{flex:1;min-width:0}
+  .room-name{font-weight:700;font-size:15px}
+  .room-meta{font-size:11px;color:var(--ink-2);margin-top:2px;min-height:13px}
+  .room-badge{flex:none;border:1px solid var(--amber);background:#FFF7E8;color:#B8860B;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+  .room-badge.ok{border-color:var(--green);background:#EAF7EF;color:#1F8A4C}
+  .room-badge.big{font-size:13px;padding:6px 14px}
+  .room-more{flex:none;border:none;background:none;color:var(--ink-2);font-size:16px;letter-spacing:1px;cursor:pointer;padding:4px}
+  .note-ta{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:14px;resize:vertical;box-sizing:border-box}
+  #sketchCv{width:100%;border:1px solid var(--line);border-radius:12px;touch-action:none;background:#fff;display:block}
+  .sk-tools{margin-top:10px}
+  .sk-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .sk-lb{font-size:12px;color:var(--ink-2)}
+  .sk-dot{width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+  .sk-dot.on{box-shadow:0 0 0 2.5px var(--primary)}
+  .sk-dot.c1{background:#8B6F47}.sk-dot.c2{background:#222}.sk-dot.c3{background:#C0392B}.sk-dot.c4{background:#2E5AAC}.sk-dot.c5{background:#2E8B57}
+  .sk-btn{border:1px solid var(--line);background:#FBFCFD;border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
+  .sk-btn.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary);font-weight:700}
   /* 案例参考 v2.5 */
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:13px;color:var(--ink);cursor:pointer;user-select:none}
@@ -219,7 +247,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.7</b>（流程含前期准备 + 合同范本 + 采购比价 + 案例参考 + 阶段材料清单）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v2.8</b>（流程前期 + 合同范本 + 采购比价 + 案例参考 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -249,6 +277,10 @@
     <div class="tab" data-t="cases" onclick="switchTab('cases')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-4.5-4.5L7 20"/></svg>
       案例
+    </div>
+    <div class="tab" data-t="design" onclick="switchTab('design')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 21h20"/><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/><path d="M9 11h.01M15 11h.01"/></svg>
+      设计
     </div>
   </nav>
 </div>
@@ -425,6 +457,22 @@ function seed(){
       subs:['电视墙','沙发','吊顶','灯光','收纳','瓷砖'],
       photos:[],   // {id,img,space,sub,note,date} 全部为用户自己上传的真实图片
     },
+    design:{   // 全屋设计（v2.8）
+      view:'main', roomTab:'note',
+      houseImgs:[],   // {id,img} 原始结构图/全屋尺寸图纸
+      fields:[        // 户型基础信息，数值由用户如实填写
+        {id:'f1',label:'建筑面积(㎡)',value:''},
+        {id:'f2',label:'套内面积(㎡)',value:''},
+        {id:'f3',label:'层高(m)',value:''},
+      ],
+      rooms:[         // 各房间设计档案，初始均为空，内容由用户上传/填写
+        {id:'r1',name:'客厅',status:'设计中',locals:[],note:'',todos:[],sketch:'',effects:[],budget:''},
+        {id:'r2',name:'厨房',status:'设计中',locals:[],note:'',todos:[],sketch:'',effects:[],budget:''},
+        {id:'r3',name:'卫生间',status:'设计中',locals:[],note:'',todos:[],sketch:'',effects:[],budget:''},
+        {id:'r4',name:'卧室',status:'设计中',locals:[],note:'',todos:[],sketch:'',effects:[],budget:''},
+        {id:'r5',name:'阳台',status:'设计中',locals:[],note:'',todos:[],sketch:'',effects:[],budget:''},
+      ],
+    },
   };
 }
 
@@ -441,6 +489,7 @@ function load(){
       if(d.purchases) s.purchases = d.purchases;  // 比价数据兼容（v2.3）
       if(d.cases) s.cases = d.cases;              // 案例参考兼容（v2.5）
       if(d.matDone) s.matDone = d.matDone;        // 阶段材料勾选兼容（v2.6）
+      if(d.design) s.design = d.design;           // 全屋设计兼容（v2.8）
       return s;
     }
   }catch(e){}
@@ -479,7 +528,10 @@ function render(){
   else if(curTab==='budget') v.innerHTML=renderBudget();
   else if(curTab==='todo') v.innerHTML=renderTodo();
   else if(curTab==='cases') v.innerHTML=renderCases();
+  else if(curTab==='design') v.innerHTML=renderDesign();
   else if(curTab==='price') v.innerHTML=renderPrice();
+  // 手绘草图：渲染后初始化画布
+  if(curTab==='design' && S.design.view!=='main' && S.design.roomTab==='sketch') setTimeout(()=>initSketch(S.design.view),0);
 }
 
 function renderOverview(){
@@ -1205,6 +1257,244 @@ function saveCase(id){
   p.note=document.getElementById('ceNote').value.trim();
   save(); closeSheet(); render();
 }
+
+/* ============ 全屋设计（v2.8） ============ */
+const ROOM_STATUSES = ['设计中','已定稿'];
+function imgCell(ph,delFn){
+  return `<div class="case-cell"><img src="${ph.img}" onclick="zoomPhoto(encodeURIComponent(this.src))">
+    <button class="case-x" onclick="event.stopPropagation();${delFn}('${ph.id}')">×</button></div>`;
+}
+function uploadBox(text,multiple,onchange){
+  return `<label class="up-box">${text}
+    <input type="file" accept="image/*" ${multiple?'multiple':''} style="display:none" onchange="${onchange}(this)"></label>`;
+}
+function renderDesign(){
+  const D=S.design;
+  if(D.view!=='main') return renderRoomDetail(D.view);
+  const house = D.houseImgs.length
+    ? `<div class="case-grid">${D.houseImgs.map(ph=>imgCell(ph,'delHouseImg')).join('')}</div>`
+    : '';
+  const fields = D.fields.map(f=>`
+    <div class="fd-row">
+      <input class="fd-label" value="${esc(f.label)}" onchange="editField('${f.id}','label',this.value)">
+      <input class="fd-val" inputmode="decimal" placeholder="待填写" value="${esc(f.value)}" onchange="editField('${f.id}','value',this.value)">
+      <button class="fd-x" onclick="delField('${f.id}')" title="删除此字段">×</button>
+    </div>`).join('');
+  const rooms = D.rooms.map(r=>{
+    const n = r.locals.length + r.effects.length + (r.sketch?1:0);
+    return `<div class="room-card" onclick="openRoom('${r.id}')">
+      <div class="room-info"><div class="room-name">${esc(r.name)}</div>
+        <div class="room-meta">${n? n+' 张图 · ':''}${r.note?'有笔记 · ':''}${r.todos.filter(t=>!t.done).length?r.todos.filter(t=>!t.done).length+' 项待办':''}</div></div>
+      <button class="room-badge ${r.status==='已定稿'?'ok':''}" onclick="event.stopPropagation();cycleRoomStatus('${r.id}')">${r.status}</button>
+      <button class="room-more" onclick="event.stopPropagation();roomMenu('${r.id}')">···</button>
+    </div>`;
+  }).join('');
+  return `
+  <div class="card">
+    <h3><span class="dot"></span>房屋结构</h3>
+    <div class="up-hint">上传原始结构图 / 全屋尺寸图纸（支持多张，可在手机相册选或直接拍照）</div>
+    ${house}
+    ${uploadBox('📷 上传结构图 / 拍照（支持多张）',true,'addHouseImgs')}
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>户型基础信息 <span style="font-size:11px;color:var(--ink-2);font-weight:400">（修改后自动保存）</span></h3>
+    ${fields}
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="addField()">＋ 新增字段（如：套内净高 / 朝向）</button>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>房间设计 <span style="font-size:11px;color:var(--ink-2);font-weight:400">（点房间进入 · 状态可点击切换）</span></h3>
+    <div class="room-list">${rooms}</div>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="addRoom()">＋ 新增房间</button>
+  </div>`;
+}
+function renderRoomDetail(rid){
+  const r=S.design.rooms.find(x=>x.id===rid); if(!r){S.design.view='main';return renderDesign();}
+  const tab=S.design.roomTab||'note';
+  const locals=r.locals.map(ph=>imgCell(ph,'delLocal')).join('');
+  const effects=r.effects.map(ph=>imgCell(ph,'delEffect')).join('');
+  const todos=r.todos.map(t=>`
+    <div class="task ${t.done?'done':''}" onclick="toggleRoomTodo('${r.id}','${t.id}')">
+      <div class="box">${t.done?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg>':''}</div>
+      <div class="txt">${esc(t.text)}</div>
+      <button class="fd-x" onclick="event.stopPropagation();delRoomTodo('${r.id}','${t.id}')">×</button>
+    </div>`).join('');
+  const notePane = `
+    <textarea class="note-ta" placeholder="记录改造构思、材料想法、开关位置、点位尺寸…" onchange="saveRoomNote('${r.id}',this.value)">${esc(r.note)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="roomTodoIn" placeholder="添加本房间待办事项…" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px" onkeydown="if(event.key==='Enter')addRoomTodo('${r.id}')">
+      <button class="btn" style="width:auto;padding:10px 16px" onclick="addRoomTodo('${r.id}')">＋</button>
+    </div>
+    ${todos?`<div style="margin-top:8px">${todos}</div>`:''}`;
+  const sketchPane = `
+    <canvas id="sketchCv" width="640" height="440"></canvas>
+    <div class="sk-tools">
+      <div class="sk-row">
+        <span class="sk-lb">画笔</span>
+        <button class="sk-dot c1" data-c="#8B6F47" onclick="skPick(this)"></button>
+        <button class="sk-dot c2" data-c="#222222" onclick="skPick(this)"></button>
+        <button class="sk-dot c3" data-c="#C0392B" onclick="skPick(this)"></button>
+        <button class="sk-dot c4" data-c="#2E5AAC" onclick="skPick(this)"></button>
+        <button class="sk-dot c5" data-c="#2E8B57" onclick="skPick(this)"></button>
+        <span style="flex:1"></span>
+        <button class="sk-btn" id="skErase" onclick="skEraseToggle()">🧽 橡皮</button>
+      </div>
+      <div class="sk-row">
+        <span class="sk-lb">粗细</span>
+        <button class="sk-btn" data-s="2" onclick="skSize(this)">细</button>
+        <button class="sk-btn on" data-s="4" onclick="skSize(this)">中</button>
+        <button class="sk-btn" data-s="8" onclick="skSize(this)">粗</button>
+        <span style="flex:1"></span>
+        <button class="sk-btn" onclick="skUndo()">↩︎ 撤销</button>
+        <button class="sk-btn" onclick="skClear()">清空画布</button>
+      </div>
+      <button class="btn" style="width:100%;margin-top:8px" id="skSaveBtn" onclick="skSave('${r.id}')">💾 保存草图</button>
+      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">提示：画完点「保存草图」才会留存；换页前未保存会丢失本次绘制。</div>
+    </div>`;
+  const midPane = `
+    <div class="seg">
+      <button class="${tab==='note'?'on':''}" onclick="S.design.roomTab='note';save();render()">📝 文字笔记</button>
+      <button class="${tab==='sketch'?'on':''}" onclick="S.design.roomTab='sketch';save();render()">✏️ 手绘草图</button>
+    </div>
+    <div class="card"><h3><span class="dot"></span>${tab==='note'?'文字笔记':'手绘草图'}</h3>${tab==='note'?notePane:sketchPane}</div>`;
+  return `
+  <button class="btn ghost" style="width:auto;padding:8px 14px;margin-bottom:10px" onclick="S.design.view='main';save();render()">← 返回房间列表</button>
+  <div class="card">
+    <h3><span class="dot"></span>${esc(r.name)} · 房间设计</h3>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:13px;color:var(--ink-2)">设计状态</span>
+      <button class="room-badge big ${r.status==='已定稿'?'ok':''}" onclick="cycleRoomStatus('${r.id}');S.design.view='${r.id}';render()">${r.status}（点击切换）</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3><span class="dot"></span>局部图 <span style="font-size:11px;color:var(--ink-2);font-weight:400">（批量上传局部结构图 / 尺寸详图）</span></h3>
+    ${locals?`<div class="case-grid">${locals}</div>`:''}
+    ${uploadBox('📷 批量上传局部图 / 拍照（支持多张）',true,'addLocalImgs')}
+  </div>
+  ${midPane}
+  <div class="card">
+    <h3><span class="dot"></span>效果 <span style="font-size:11px;color:var(--ink-2);font-weight:400">（本房间最终定稿效果图）</span></h3>
+    ${effects?`<div class="case-grid">${effects}</div>`:''}
+    ${uploadBox('📷 上传效果图 / 拍照（支持多张）',true,'addEffectImgs')}
+  </div>
+  <div class="card">
+    <h3><span class="dot"></span>硬装预算</h3>
+    <div class="fd-row"><span class="fd-label" style="background:none">预算金额 (¥)</span>
+      <input class="fd-val" inputmode="decimal" placeholder="0" value="${esc(r.budget)}" onchange="saveRoomBudget('${r.id}',this.value)"></div>
+    <div style="font-size:11px;color:var(--ink-2);margin-top:6px">此处为该房间硬装预算额，仅供设计对照；实际支出请记到「预算」页。</div>
+  </div>`;
+}
+/* --- 画布（手绘草图） --- */
+let SK=null;
+function initSketch(rid){
+  const cv=document.getElementById('sketchCv'); if(!cv) return;
+  const r=S.design.rooms.find(x=>x.id===rid); if(!r) return;
+  const ctx=cv.getContext('2d');
+  SK={cv,ctx,rid,strokes:[],cur:null,color:'#8B6F47',size:4,erase:false};
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  if(r.sketch){ const im=new Image(); im.onload=()=>ctx.drawImage(im,0,0,cv.width,cv.height); im.src=r.sketch; }
+  const pos=e=>{const t=cv.getBoundingClientRect();return{x:(e.clientX-t.left)*cv.width/t.width,y:(e.clientY-t.top)*cv.height/t.height};};
+  const start=e=>{ if(e.button&&e.button!==0) return; e.preventDefault();
+    SK.cur={color:SK.erase?'#ffffff':SK.color,size:SK.erase?20:SK.size,pts:[pos(e)]};
+    cv.setPointerCapture&&cv.setPointerCapture(e.pointerId); };
+  const move=e=>{ if(!SK||!SK.cur) return; e.preventDefault();
+    const p=pos(e), c=SK.cur, last=c.pts[c.pts.length-1];
+    c.pts.push(p);
+    SK.ctx.strokeStyle=c.color; SK.ctx.lineWidth=c.size;
+    SK.ctx.beginPath(); SK.ctx.moveTo(last.x,last.y); SK.ctx.lineTo(p.x,p.y); SK.ctx.stroke(); };
+  const end=()=>{ if(!SK||!SK.cur) return; if(SK.cur.pts.length>1) SK.strokes.push(SK.cur); SK.cur=null; };
+  cv.onpointerdown=start; cv.onpointermove=move; window.onpointerup=end;
+}
+function skRedraw(){
+  if(!SK) return; const c=SK.ctx;
+  c.fillStyle='#fff'; c.fillRect(0,0,SK.cv.width,SK.cv.height);
+  SK.strokes.forEach(st=>{ c.strokeStyle=st.color; c.lineWidth=st.size; c.beginPath();
+    st.pts.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y)); c.stroke(); });
+}
+function skPick(el){ if(!SK) return; SK.color=el.dataset.c; SK.erase=false;
+  document.querySelectorAll('.sk-dot').forEach(b=>b.classList.remove('on')); el.classList.add('on');
+  document.getElementById('skErase').classList.remove('on'); }
+function skEraseToggle(){ if(!SK) return; SK.erase=!SK.erase;
+  document.getElementById('skErase').classList.toggle('on',SK.erase); }
+function skSize(el){ if(!SK) return; SK.size=+el.dataset.s;
+  document.querySelectorAll('[data-s]').forEach(b=>b.classList.remove('on')); el.classList.add('on'); }
+function skUndo(){ if(!SK) return; SK.strokes.pop(); skRedraw(); }
+function skClear(){ if(!SK) return; if(SK.strokes.length&&!confirm('清空当前画布（含本次未保存的全部笔画）？')) return;
+  SK.strokes=[]; skRedraw(); }
+function skSave(rid){
+  if(!SK) return;
+  const t=document.createElement('canvas'); t.width=SK.cv.width; t.height=SK.cv.height;
+  const c=t.getContext('2d'); c.fillStyle='#fff'; c.fillRect(0,0,t.width,t.height); c.drawImage(SK.cv,0,0);
+  const r=S.design.rooms.find(x=>x.id===rid); if(!r) return;
+  r.sketch=t.toDataURL('image/jpeg',0.72);
+  try{ save(); }catch(e){ alert('本地存储空间不足，草图未能保存（可删除部分案例/照片后重试）'); return; }
+  const b=document.getElementById('skSaveBtn'); if(b){ b.textContent='✓ 已保存'; setTimeout(()=>{b.textContent='💾 保存草图';},1500); }
+}
+/* --- 房间 / 字段 / 图片交互 --- */
+function openRoom(rid){ S.design.view=rid; S.design.roomTab='note'; save(); render(); }
+function cycleRoomStatus(rid){
+  const r=S.design.rooms.find(x=>x.id===rid);
+  r.status = r.status==='已定稿' ? '设计中' : '已定稿'; save(); render();
+}
+function roomMenu(rid){
+  const r=S.design.rooms.find(x=>x.id===rid);
+  openSheet(`<h4>房间：${esc(r.name)}</h4>
+    <button class="btn" style="width:100%" onclick="closeSheet();renameRoom('${rid}')">✎ 重命名</button>
+    <button class="btn cancel" style="width:100%;margin-top:8px" onclick="closeSheet();delRoom('${rid}')">🗑 删除房间（房间内图片/笔记/草图一并删除）</button>
+    <button class="btn cancel" style="width:100%;margin-top:8px" onclick="closeSheet()">取消</button>`);
+}
+function renameRoom(rid){
+  const r=S.design.rooms.find(x=>x.id===rid);
+  const n=prompt('房间名称：',r.name); if(n===null) return; const v=n.trim(); if(!v){alert('名称不能为空');return;}
+  r.name=v; save(); render();
+}
+function delRoom(rid){
+  if(!confirm('确定删除该房间及其全部设计内容？此操作不可恢复。')) return;
+  S.design.rooms=S.design.rooms.filter(x=>x.id!==rid); save(); render();
+}
+function addRoom(){
+  const n=prompt('新房间名称（如：玄关 / 餐厅 / 书房）：'); if(n===null) return; const v=n.trim(); if(!v){alert('名称不能为空');return;}
+  S.design.rooms.push({id:uid(),name:v,status:'设计中',locals:[],note:'',todos:[],sketch:'',effects:[],budget:''});
+  save(); render();
+}
+function addHouseImgs(inp){ const D=S.design; let pend=[...inp.files].length;
+  [...inp.files].forEach(f=>resizeImage(f,900,0.7,d=>{ D.houseImgs.push({id:uid(),img:d}); if(--pend===0){save();render();} }));
+  inp.value='';
+}
+function delHouseImg(id){ S.design.houseImgs=S.design.houseImgs.filter(x=>x.id!==id); save(); render(); }
+function addLocalImgs(inp){ const r=S.design.rooms.find(x=>x.id===S.design.view); let pend=[...inp.files].length;
+  [...inp.files].forEach(f=>resizeImage(f,900,0.7,d=>{ r.locals.push({id:uid(),img:d}); if(--pend===0){save();render();} }));
+  inp.value='';
+}
+function delLocal(id){ const r=S.design.rooms.find(x=>x.id===S.design.view); r.locals=r.locals.filter(x=>x.id!==id); save(); render(); }
+function addEffectImgs(inp){ const r=S.design.rooms.find(x=>x.id===S.design.view); let pend=[...inp.files].length;
+  [...inp.files].forEach(f=>resizeImage(f,900,0.7,d=>{ r.effects.push({id:uid(),img:d}); if(--pend===0){save();render();} }));
+  inp.value='';
+}
+function delEffect(id){ const r=S.design.rooms.find(x=>x.id===S.design.view); r.effects=r.effects.filter(x=>x.id!==id); save(); render(); }
+function editField(id,k,v){ const f=S.design.fields.find(x=>x.id===id); v=v.trim();
+  if(k==='label'&&!v){alert('字段名不能为空');render();return;}
+  f[k]=v; save();
+}
+function delField(id){ if(!confirm('删除该字段？')) return; S.design.fields=S.design.fields.filter(x=>x.id!==id); save(); render(); }
+function addField(){
+  const n=prompt('字段名称（如：朝向 / 套内净高）：'); if(n===null) return; const v=n.trim(); if(!v){alert('名称不能为空');return;}
+  S.design.fields.push({id:uid(),label:v,value:''}); save(); render();
+}
+function saveRoomNote(rid,v){ const r=S.design.rooms.find(x=>x.id===rid); r.note=v; save(); }
+function addRoomTodo(rid){
+  const i=document.getElementById('roomTodoIn'); const v=(i.value||'').trim(); if(!v) return;
+  const r=S.design.rooms.find(x=>x.id===rid); r.todos.push({id:uid(),text:v,done:false});
+  save(); render();
+}
+function toggleRoomTodo(rid,tid){ const r=S.design.rooms.find(x=>x.id===rid);
+  const t=r.todos.find(x=>x.id===tid); t.done=!t.done; save(); render(); }
+function delRoomTodo(rid,tid){ const r=S.design.rooms.find(x=>x.id===rid);
+  r.todos=r.todos.filter(x=>x.id!==tid); save(); render(); }
+function saveRoomBudget(rid,v){ const r=S.design.rooms.find(x=>x.id===rid);
+  r.budget=v.replace(/[^\d.]/g,''); save(); render(); }
 
 /* ============ 交互 ============ */
 function toggleStage(id){ const s=S.stages.find(x=>x.id===id); s.open=!s.open; save(); render(); }
