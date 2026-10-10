@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.7</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.8</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -765,7 +765,8 @@ function renderInspectCard(){
       ? `<img src="${p.img}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)" onclick="zoomPhoto('${encodeURIComponent(p.img)}')">`
       : `<div style="width:64px;height:64px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ink-2);text-align:center;padding:3px">${esc(p.caption||'视频')}</div>`;
     const aiBtn = (aiOn && p.img) ? `<div onclick="analyzeInspectPhoto(${i})" title="用 AI 分析这张" style="position:absolute;bottom:-7px;right:-7px;background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">🤖</div>` : '';
-    return `<div style="position:relative">${thumb}<div onclick="delInspectPhoto(${i})" style="position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">×</div>${aiBtn}</div>`;
+    const aiTag = (p.aiNote||(!p.img&&p.caption)) ? `<div style="position:absolute;bottom:-6px;left:-4px;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:9px;padding:1px 5px;color:var(--ink-2);white-space:nowrap;max-width:76px;overflow:hidden;text-overflow:ellipsis">${esc(p.aiNote||p.caption||'')}</div>` : '';
+    return `<div style="position:relative">${thumb}<div onclick="delInspectPhoto(${i})" style="position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">×</div>${aiBtn}${aiTag}</div>`;
   }).join('');
   const listHtml = open.length? open.map(it=>{
     const o=ins.issues[it.id];
@@ -787,7 +788,7 @@ function renderInspectCard(){
       <div style="flex:1;background:var(--blue-soft);border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--blue)">${sevCount('high')}</div><div style="font-size:11px;color:var(--ink-2)">必须改</div></div>
       <div style="flex:1;background:var(--bg);border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:800">${done.length}</div><div style="font-size:11px;color:var(--ink-2)">已整改</div></div>
     </div>`:'';
-  const listBlock = onItems.length?`<div style="margin-top:12px"><div class="gt" style="margin-bottom:8px">⚠️ 需要改正 / 修补的地方</div>${listHtml}
+  const listBlock = onItems.length?`<div id="inspectList" style="margin-top:12px"><div class="gt" style="margin-bottom:8px">⚠️ 需要改正 / 修补的地方（含 🤖 AI 发现）</div>${listHtml}
       <button class="btn ghost" style="width:100%;margin-top:6px;padding:8px 0;font-size:13px" onclick="copyInspect()">📋 复制整改清单（发给工长）</button>
     </div>`:'';
   const aiRow = `
@@ -803,7 +804,7 @@ function renderInspectCard(){
       <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；智谱 glm-4v-flash / Gemini 免费额度均不收费。隐蔽工程以人工/监理为准。</div>
     </div>`;
   return `
-  <div class="card">
+  <div class="card" id="inspectCard">
     <h3><span class="dot"></span>📸 装修巡检 · AI 拍照找问题</h3>
     <div style="font-size:12px;color:var(--ink-2);line-height:1.5">上传现场照片（或视频抽帧），自动识别没做好的地方，直接生成整改清单。</div>
     <label class="up-box" style="margin-top:10px">
@@ -947,11 +948,14 @@ async function analyzeInspectPhoto(i){
   try{
     const url=await resizeImageForAPI(p.img);
     const res=await callVision(url);
-    if(res.error){ toast('分析失败：'+res.error); return; }
-    const n=applyAIFindings(res.issues||[]);
-    p.aiNote='🤖 已分析'; save(); render();
-    toast('🤖 分析完成：发现 '+n+' 处需整改', 2800);
-  }catch(e){ toast('分析出错：'+(e&&e.message?e.message:e)); }
+    if(res.error){ toast('分析失败：'+res.error, 4200); return; }
+    const n=applyAIFindings(res.issues||[], i);
+    p.aiNote = n? ('🤖 已分析 · '+n+' 处') : '🤖 已分析 · 未见明显问题';
+    save(); render();
+    toast('🤖 分析完成：发现 '+n+' 处需整改，已滚动到清单', 3000);
+    // 自动滚动到整改清单，避免结果藏在按钮下方被忽略
+    requestAnimationFrame(()=>{ const el=document.getElementById('inspectList')||document.getElementById('inspectCard'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'}); });
+  }catch(e){ toast('分析出错：'+(e&&e.message?e.message:e), 4200); }
 }
 async function analyzeAllInspect(){
   if(!AI_CFG||!AI_CFG.key){ toast('请先点「⚙️ 设置」配置免费视觉模型（智谱 glm-4v-flash 免费不收费）', 3200); openAISettings(); return; }
@@ -959,13 +963,20 @@ async function analyzeAllInspect(){
   if(!idx.length){ toast('没有可分析的照片'); return; }
   for(const i of idx){ await analyzeInspectPhoto(i); }
 }
-function applyAIFindings(arr){
+function applyAIFindings(arr, photoIdx){
+  // 同一张照片重新分析时，先清掉上一次的 AI 发现，避免重复堆叠
+  if(photoIdx!==undefined){
+    Object.keys(S.inspect.issues).forEach(k=>{
+      const o=S.inspect.issues[k];
+      if(o&&o.ai&&o.photoIdx===photoIdx) delete S.inspect.issues[k];
+    });
+  }
   let n=0;
   (arr||[]).forEach(f=>{
     if(!f||!f.issue) return;
     const id='ai_'+uid();
     const sev=(f.sev==='high'||f.sev==='mid'||f.sev==='low')?f.sev:'mid';
-    S.inspect.issues[id]={on:true,sev,fixed:false,ai:true,aiText:String(f.issue),aiCat:String(f.cat||'AI 发现'),aiFix:String(f.fix||''),note:''};
+    S.inspect.issues[id]={on:true,sev,fixed:false,ai:true,photoIdx:photoIdx,aiText:String(f.issue),aiCat:String(f.cat||'AI 发现'),aiFix:String(f.fix||''),note:''};
     n++;
   });
   return n;
@@ -980,7 +991,7 @@ function aiErrHint(status){
 async function callVision(dataUrl){
   if(AI_CFG.provider==='gemini') return callVisionGemini(dataUrl);
   const cfg=AI_CFG;
-  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON，不要多余文字。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
+  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修现场照片。请逐区域仔细检查：墙面/顶面（裂缝、空鼓、起皮、不平、渗水痕）、地面瓷砖（空鼓、破损、缝隙、坡度）、水电（线盒未装盖板、线头裸露、插座歪斜、管线不横平竖直）、门窗收口（缝隙、打胶）、成品保护（划伤、磕碰）。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位，如：卫生间墙面左侧","issue":"现象，如：电线底盒未装盖板、线头裸露","sev":"high|mid|low","fix":"怎么改，如：安装阻燃盖板并压紧线头，验收时测绝缘"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造、严禁泛泛而谈。';
   const body={ model:cfg.model, temperature:0.3, messages:[
     {role:'system',content:sys},
     {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'}, {type:'image_url',image_url:{url:dataUrl}} ]}
@@ -996,7 +1007,7 @@ async function callVision(dataUrl){
 async function callVisionGemini(dataUrl){
   const cfg=AI_CFG;
   const model=cfg.model||'gemini-2.0-flash';
-  const sys='你是资深装修监理，擅长从现场照片发现施工质量缺陷（空鼓、裂缝、起皮、不平整、阴阳角不顺直、美缝脱落、防水不到位、收口不齐、成品划伤等）。请只输出 JSON。格式：{"issues":[{"cat":"部位","issue":"简短描述问题","sev":"high|mid|low","fix":"如何改正的简要方法"}]}。high=必须改，mid=建议改，low=可暂缓。若照片看不出明显问题，返回 {"issues":[]}。';
+  const sys='你是有20年经验的装修监理，正在看一张装修现场照片。请逐区域仔细检查：墙面/顶面（裂缝、空鼓、起皮、不平、渗水痕）、地面瓷砖（空鼓、破损、缝隙、坡度）、水电（线盒未装盖板、线头裸露、插座歪斜）、门窗收口（缝隙、打胶）、成品保护（划伤、磕碰）。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造、严禁泛泛而谈。';
   const b64=(dataUrl.split(',')[1]||dataUrl);
   const body={
     contents:[{parts:[
