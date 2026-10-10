@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.8</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.9</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -780,7 +780,10 @@ function renderInspectCard(){
       </div>
       <div style="font-size:12px;color:var(--ink-2);margin-top:5px">📍 ${esc(it.cat)} · 🔧 ${esc(it.fix)}</div>
       ${o.note?`<div style="font-size:12px;color:var(--ink);margin-top:4px">📝 ${esc(o.note)}</div>`:''}
-      <button class="btn ghost" style="margin-top:7px;padding:4px 12px;font-size:12px" onclick="toggleInspectFixed('${it.id}')">✓ 标记已整改</button>
+      <div style="display:flex;gap:8px;margin-top:7px">
+        <button class="btn ghost" style="flex:1;padding:4px 12px;font-size:12px" onclick="toggleInspectFixed('${it.id}')">✓ 标记已整改</button>
+        ${it.ai?`<button class="btn ghost" style="padding:4px 12px;font-size:12px;color:var(--ink-2)" onclick="delInspectIssue('${it.id}')">✕ 误报，删除</button>`:''}
+      </div>
     </div>`;
   }).join('') : (onItems.length? `<div style="font-size:13px;color:var(--green);padding:8px 0">🎉 勾选的问题都已整改完成！</div>` : `<div style="font-size:12px;color:var(--ink-2);padding:8px 0">上传照片用 🤖 自动分析，或对照清单手动勾选，这里会自动生成「需要改正修补的地方」清单。</div>`);
   const statsHtml = onItems.length?`<div style="display:flex;gap:8px;margin-top:12px">
@@ -882,6 +885,13 @@ function setInspectSev(id,sev){
 function toggleInspectFixed(id){
   const o=S.inspect.issues[id]; if(!o) return;
   o.fixed=!o.fixed; save(); render();
+}
+// AI 误报删除：仅移除该条记录，不影响人工勾选与其他数据
+function delInspectIssue(id){
+  const o=S.inspect.issues[id];
+  if(!o||!o.ai) return;
+  if(!confirm('确认这条是 AI 误报并删除吗？')) return;
+  delete S.inspect.issues[id]; save(); render();
 }
 function copyInspect(){
   const open=inspAll().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
@@ -991,7 +1001,7 @@ function aiErrHint(status){
 async function callVision(dataUrl){
   if(AI_CFG.provider==='gemini') return callVisionGemini(dataUrl);
   const cfg=AI_CFG;
-  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修现场照片。请逐区域仔细检查：墙面/顶面（裂缝、空鼓、起皮、不平、渗水痕）、地面瓷砖（空鼓、破损、缝隙、坡度）、水电（线盒未装盖板、线头裸露、插座歪斜、管线不横平竖直）、门窗收口（缝隙、打胶）、成品保护（划伤、磕碰）。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位，如：卫生间墙面左侧","issue":"现象，如：电线底盒未装盖板、线头裸露","sev":"high|mid|low","fix":"怎么改，如：安装阻燃盖板并压紧线头，验收时测绝缘"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造、严禁泛泛而谈。';
+  const base=(cfg.baseUrl||'').replace(/\/$/,'');  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律：①未完工/尚未施工的部位不算缺陷，只报真实质量问题或隐患；②瓷砖砖缝（均匀的深色勾缝线）不是裂缝，严禁把砖缝当裂缝报；③区分部位：墙面还是地面，严禁搞错。重点检查：排水/排污管管口是否敞开未封堵（水泥渣掉入会堵管，属高危）、冷热水出水口是否加堵头保护、线盒内线头是否裸露乱放、瓷砖切割口是否粗糙未收口、瓷砖表面水泥浆是否未清理、砖面空鼓破损、成品是否被压划伤。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位，如：墙面中部白色PVC排水管","issue":"现象，如：管口敞开未封堵，管内可见水泥残渣","sev":"high|mid|low","fix":"怎么改，如：立即用专用管帽或塑料布+胶带封口，防止水泥浆掉入堵塞下水"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造。';
   const body={ model:cfg.model, temperature:0.3, messages:[
     {role:'system',content:sys},
     {role:'user',content:[ {type:'text',text:'请分析这张装修现场照片，列出没做好的地方及改正方法。'}, {type:'image_url',image_url:{url:dataUrl}} ]}
@@ -1007,7 +1017,7 @@ async function callVision(dataUrl){
 async function callVisionGemini(dataUrl){
   const cfg=AI_CFG;
   const model=cfg.model||'gemini-2.0-flash';
-  const sys='你是有20年经验的装修监理，正在看一张装修现场照片。请逐区域仔细检查：墙面/顶面（裂缝、空鼓、起皮、不平、渗水痕）、地面瓷砖（空鼓、破损、缝隙、坡度）、水电（线盒未装盖板、线头裸露、插座歪斜）、门窗收口（缝隙、打胶）、成品保护（划伤、磕碰）。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造、严禁泛泛而谈。';
+  const sys='你是有20年经验的装修监理，正在看一张装修中工地的照片。判断纪律：①未完工/尚未施工的部位不算缺陷，只报真实质量问题或隐患；②瓷砖砖缝不是裂缝，严禁把砖缝当裂缝报；③区分部位：墙面还是地面，严禁搞错。重点检查：排水/排污管管口是否敞开未封堵、冷热水出水口是否加堵头保护、线盒内线头是否裸露乱放、瓷砖切割口是否粗糙未收口、瓷砖表面水泥浆是否未清理、砖面空鼓破损、成品是否被压划伤。只报告照片中真实可见的问题，每条写清具体位置和看到的现象，改法要小白能照着做。输出 JSON：{"issues":[{"cat":"具体部位","issue":"现象","sev":"high|mid|low","fix":"怎么改"}]}。通常能发现 3-8 处；只有照片确实看不出任何问题时才返回 {"issues":[]}，严禁编造。';
   const b64=(dataUrl.split(',')[1]||dataUrl);
   const body={
     contents:[{parts:[
