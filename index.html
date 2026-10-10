@@ -266,7 +266,7 @@
 <div class="app">
   <header>
     <div class="title">🏠 装修管家工作台</div>
-    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.5</b>（免费 Gemini 视觉找问题 + 语音播报整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
+    <div class="sub">从验房到入住，一站式装修管家 · <b id="verTag">v3.6</b>（免费视觉AI·上传即出整改清单 + 装修巡检 + 比价平台直达 + 9阶段耗时参考 + 顺序时间轴 + 找谁做 + 自购材料清单 + 合同范本 + 案例 + 全屋设计）</div>
     <button class="reset" onclick="resetAll()">重置</button>
   </header>
 
@@ -733,8 +733,6 @@ function renderOverview(){
 
   ${renderInspectCard()}
 
-  ${renderVoiceCard()}
-
   <div class="card">
     <h3><span class="dot"></span>预算速览</h3>
     <div class="budget-total">
@@ -784,11 +782,7 @@ function renderInspectCard(){
       <div style="flex:1;background:var(--bg);border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:16px;font-weight:800">${done.length}</div><div style="font-size:11px;color:var(--ink-2)">已整改</div></div>
     </div>`:'';
   const listBlock = onItems.length?`<div style="margin-top:12px"><div class="gt" style="margin-bottom:8px">⚠️ 需要改正 / 修补的地方</div>${listHtml}
-      <div style="display:flex;gap:8px;margin-top:6px">
-        <button class="btn" style="flex:1;padding:8px 0;font-size:13px" onclick="speakInspect()">🔊 语音播报</button>
-        <button class="btn ghost" style="flex:1;padding:8px 0;font-size:13px" onclick="copyInspect()">📋 复制清单</button>
-      </div>
-      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔊 点「语音播报」用中文朗读：每条问题 + 部位 + 如何改正（再次点击可停止）。需手机系统浏览器（Safari/Chrome）支持，微信内置浏览器可能无语音。</div>
+      <button class="btn ghost" style="width:100%;margin-top:6px;padding:8px 0;font-size:13px" onclick="copyInspect()">📋 复制整改清单（发给工长）</button>
     </div>`:'';
   const aiRow = `
     <div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--primary-soft)">
@@ -800,12 +794,12 @@ function renderInspectCard(){
         <input type="checkbox" onchange="AI_CFG.autoAnalyze=this.checked;saveAICfg();render()" ${AI_CFG.autoAnalyze!==false?'checked':''}> 上传照片后自动用 AI 分析
       </label>
       ${aiOn&&ins.photos.some(p=>p.img)?`<button class="btn" style="width:100%;margin-top:8px;padding:7px 0;font-size:13px" onclick="analyzeAllInspect()">🤖 一键分析全部照片（${ins.photos.filter(p=>p.img).length} 张）</button>`:''}
-      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；选 Gemini 走免费额度不收费，其他按各自计费。隐蔽工程以人工/监理为准。</div>
+      <div style="font-size:11px;color:var(--ink-2);margin-top:6px">🔒 Key 仅存你本机；智谱 glm-4v-flash / Gemini 免费额度均不收费。隐蔽工程以人工/监理为准。</div>
     </div>`;
   return `
   <div class="card">
     <h3><span class="dot"></span>📸 装修巡检 · AI 拍照找问题</h3>
-    <div style="font-size:12px;color:var(--ink-2);line-height:1.5">上传现场照片（或视频抽帧），自动识别没做好的地方，生成整改清单，可语音播报。</div>
+    <div style="font-size:12px;color:var(--ink-2);line-height:1.5">上传现场照片（或视频抽帧），自动识别没做好的地方，直接生成整改清单。</div>
     <label class="up-box" style="margin-top:10px">
       <div style="font-size:24px">＋</div>
       <div>上传现场照片 / 视频</div>
@@ -816,17 +810,6 @@ function renderInspectCard(){
     ${aiRow}
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openInspectChecklist()">🔍 对照清单手动自查（已勾 ${onItems.length} 项）</button>
     ${statsHtml}${listBlock}
-  </div>`;
-}
-function renderVoiceCard(){
-  const open=inspAll().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
-  const n=open.length;
-  return `
-  <div class="card" style="background:linear-gradient(135deg,#FFF1EA,#FFE3D6)">
-    <h3><span class="dot"></span>🎙️ 语音播报 · 听整改清单</h3>
-    <div style="font-size:13px;color:var(--ink-2);line-height:1.6">把现场照片 / 视频对照清单勾出问题后，点下面按钮，系统用中文<b>念出每条不对的地方 + 如何改正</b>。边看工地边听，不用一直盯屏幕。</div>
-    <button class="btn" style="width:100%;margin-top:12px;padding:13px 0;font-size:15px" onclick="speakInspect()">🔊 ${n?('播放 '+n+' 条整改建议'):'语音播报整改清单'}</button>
-    <div style="font-size:11px;color:var(--ink-2);margin-top:8px">${n?('当前有 '+n+' 条待整改可播报 · 再次点击停止'):'暂无待播报项，先到上方「对照清单自查」勾选问题'} · 需手机系统浏览器（Safari/Chrome）支持语音</div>
   </div>`;
 }
 function uploadInspectPhoto(){
@@ -903,22 +886,6 @@ function copyInspect(){
     navigator.clipboard.writeText(txt).then(()=>alert('已复制整改清单到剪贴板')).catch(()=>prompt('复制下面的整改清单：',txt));
   } else { prompt('复制下面的整改清单：',txt); }
 }
-/* 语音播报整改清单（v3.3）：用中文朗读每条「问题 + 部位 + 如何改正」，再次点击停止 */
-function speakInspect(){
-  if(!('speechSynthesis' in window)){ alert('当前浏览器不支持语音播报，请用手机系统浏览器（Safari / Chrome）打开本页面。'); return; }
-  if(window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); return; }
-  const open=inspAll().filter(it=>S.inspect.issues[it.id]&&S.inspect.issues[it.id].on&&!S.inspect.issues[it.id].fixed);
-  if(!open.length){ alert('还没有待播报的整改项，先上传照片用 🤖 分析，或点「🔍 对照清单自查」勾选你照片里发现的问题。'); return; }
-  window.speechSynthesis.cancel();
-  const sevMap={high:'必须改',mid:'建议改',low:'可暂缓'};
-  let txt='装修整改清单，共'+open.length+'项。';
-  open.forEach((it,i)=>{ const o=S.inspect.issues[it.id]; txt+='第'+(i+1)+'项，'+(sevMap[o.sev]||'')+'，'+it.text+'，位于'+it.cat+'。改正方法：'+it.fix+'。'; });
-  const u=new SpeechSynthesisUtterance(txt);
-  u.lang='zh-CN'; u.rate=1; u.pitch=1;
-  try{ const vs=window.speechSynthesis.getVoices()||[]; const zh=vs.find(v=>/zh|Chinese|普通话|国语/i.test((v.lang||'')+(v.name||''))); if(zh) u.voice=zh; }catch(e){}
-  window.speechSynthesis.speak(u);
-}
-
 /* ============ AI 视觉分析（v3.4）：拍照/视频抽帧 → 调视觉大模型 → 结构化整改清单 ============ */
 function openAISettings(){
   const p=AI_CFG.provider||'';
@@ -927,10 +894,10 @@ function openAISettings(){
     <p style="font-size:12px;color:var(--ink-2);margin:4px 0 8px">配置后，拍照即可自动识别施工缺陷并生成整改清单。API Key 仅存你本机浏览器，不会上传到本工作台或 GitHub，也不会被他人看到。</p>
     <label style="font-size:13px">服务商
       <select id="ai_prov" onchange="aiPreset(this.value)" style="width:100%;margin-top:4px;padding:8px;border:1px solid var(--line);border-radius:8px">
-        <option value="gemini" ${p==='gemini'?'selected':''}>Gemini（谷歌·免费额度，推荐）</option>
+        <option value="gemini" ${p==='gemini'?'selected':''}>Gemini（谷歌免费·需能访问谷歌）</option>
         <option value="openai" ${p==='openai'?'selected':''}>OpenAI（gpt-4o-mini 等）</option>
         <option value="qwen" ${p==='qwen'?'selected':''}>通义千问（qwen-vl-max）</option>
-        <option value="zhipu" ${p==='zhipu'?'selected':''}>智谱 GLM-4V</option>
+        <option value="zhipu" ${p==='zhipu'?'selected':''}>智谱 GLM-4V-Flash（免费·国内推荐）</option>
         <option value="custom" ${p==='custom'?'selected':''}>自定义（兼容 OpenAI 格式）</option>
       </select>
     </label>
@@ -946,16 +913,16 @@ function openAISettings(){
     <label style="font-size:12px;display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink-2)">
       <input type="checkbox" id="ai_json" ${AI_CFG.json!==false?'checked':''}> 强制 JSON 输出（部分服务商不支持，调用报错可关闭）
     </label>
-    <p style="font-size:11px;color:var(--amber);margin:8px 0">⚠️ 选 <b>Gemini</b> 走谷歌免费额度（不收费，有速率限制，偶尔需稍等重试）；其他服务商按各自计费。照片会发送给所选服务商分析，含门牌/人脸等敏感信息的图建议先打码。</p>
+    <p style="font-size:11px;color:var(--amber);margin:8px 0">✅ <b>国内推荐智谱 GLM-4V-Flash（免费不收费）</b>：手机/电脑打开 open.bigmodel.cn → 注册 → 控制台「API Keys」→ 创建并复制粘贴到上面即可。Gemini 也免费但需能访问谷歌。照片会发给所选服务商分析，含门牌/人脸等敏感信息的图建议先打码。</p>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn" style="flex:1" onclick="saveAISettings()">保存</button>
       <button class="btn ghost" style="flex:1" onclick="closeSheet()">取消</button>
     </div>`);
-  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
+  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-flash'},custom:{base:'',model:''}};
   if(p&&presets[p]){ const b=document.getElementById('ai_base'),m=document.getElementById('ai_model'); if(b)b.value=presets[p].base; if(m)m.value=presets[p].model; }
 }
 function aiPreset(v){
-  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-plus'},custom:{base:'',model:''}};
+  const presets={gemini:{base:'',model:'gemini-2.0-flash'},openai:{base:'https://api.openai.com/v1',model:'gpt-4o-mini'},qwen:{base:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-vl-max'},zhipu:{base:'https://open.bigmodel.cn/api/paipai/v4',model:'glm-4v-flash'},custom:{base:'',model:''}};
   const pp=presets[v]||{base:'',model:''};
   const b=document.getElementById('ai_base'),m=document.getElementById('ai_model');
   if(b)b.value=pp.base; if(m)m.value=pp.model;
@@ -969,7 +936,7 @@ function saveAISettings(){
 async function analyzeInspectPhoto(i){
   const p=S.inspect.photos[i];
   if(!p||!p.img){ toast('这张没有可用画面（视频未抽帧）'); return; }
-  if(!AI_CFG||!AI_CFG.key){ openAISettings(); return; }
+  if(!AI_CFG||!AI_CFG.key){ toast('请先点「⚙️ 设置」配置免费视觉模型（智谱 glm-4v-flash 免费不收费）', 3200); openAISettings(); return; }
   toast('🤖 正在分析第 '+(i+1)+' 张…', 1600);
   try{
     const url=await resizeImageForAPI(p.img);
@@ -981,7 +948,7 @@ async function analyzeInspectPhoto(i){
   }catch(e){ toast('分析出错：'+(e&&e.message?e.message:e)); }
 }
 async function analyzeAllInspect(){
-  if(!AI_CFG||!AI_CFG.key){ openAISettings(); return; }
+  if(!AI_CFG||!AI_CFG.key){ toast('请先点「⚙️ 设置」配置免费视觉模型（智谱 glm-4v-flash 免费不收费）', 3200); openAISettings(); return; }
   const idx=S.inspect.photos.map((p,i)=>i).filter(i=>S.inspect.photos[i].img);
   if(!idx.length){ toast('没有可分析的照片'); return; }
   for(const i of idx){ await analyzeInspectPhoto(i); }
